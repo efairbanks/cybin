@@ -4,6 +4,7 @@ This is Cybin. This is early, unstable, _*alpha*_ software. You've been warned.
 
 ## Goals:
 
+* Few dependencies (relatively speaking) _(done)_
 * Real-time, from-scratch audio synthesis in LUA _(done)_
 * Real-time, from-scratch video & image synthesis with LUA and OpenGL _(tbd)_
 * Seamless transition from live performance to high-quality offline rendering _(tbd)_
