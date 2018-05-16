@@ -1,6 +1,6 @@
 # Cybin
 
-This is Cybin. This is an _*ALPHA*_ software. You've been warned.
+This is Cybin. This is early, unstable, _*alpha*_ software. You've been warned.
 
 ## Goals:
 
