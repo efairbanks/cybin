@@ -10,7 +10,10 @@ This is Cybin. This is early, unstable, _*alpha*_ software. You've been warned.
 * Loading audio, video, and image data _(tbd)_
 * On-the-fly reloading of LUA/OpenGL code with file watchers or a REPL _(tbd)_
 * C++ classes wrapped in LUA interfaces with efficient implementations of common effects and techinques _(tbd)_
-  * _(granular synthesis, ray-marching, cellular automata, etc...)_
+  * granular synthesis
+  * ray-marching
+  * cellular automata
+  * etc...
 * Mind-blowing demos and example code _(tbd)_
 
 ## Dependencies
