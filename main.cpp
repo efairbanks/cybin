@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <soundio/soundio.h>
-#define DEBUG_MESSAGES_ON
+#define DEBUG_MESSAGES_OFF
 #if defined(DEBUG_MESSAGES_ON)
 #define DEBUG(MSG) printf(MSG); printf("\n")
 #else
