@@ -9,10 +9,10 @@
 #else
 #define DEBUG(MSG)
 #endif
+// ------------ //
 lua_State *L;
+// ------------ //
 void bail(lua_State *L, char *msg){fprintf(stderr,"\nFATAL ERROR:\n  %s: %s\n\n",msg,lua_tostring(L,-1));exit(1);}
-// ------------ //
-// ------------ //
 // ------------ //
 float __process(float sr){
   lua_getglobal(L, "__process");;
@@ -22,11 +22,6 @@ float __process(float sr){
   lua_pop(L,1);
   return mynumber;
 }
-// ------------ //
-// ------------ //
-// ------------ //
-// ------------ //
-// ------------ //
 // ------------ //
 int main(int argc, char** argv){
   // --- LuaJIT Setup --- //
