@@ -7,7 +7,7 @@
 #include <string.h>
 #include <lua.hpp>
 
-#define CYBIN_PROMPT "io.write(\"cybin> \")\n"
+#define CYBIN_PROMPT "cybin> "
 
 class Interpreter{
   static lua_State* __L;
@@ -16,6 +16,7 @@ class Interpreter{
     if(!__L){
       __L=luaL_newstate();
       luaL_openlibs(__L);
+      fprintf(stderr,"%s",CYBIN_PROMPT);
     }
   }
   static void LoadFile(char* filename){
@@ -27,20 +28,18 @@ class Interpreter{
     (*lock)++;
     while((*lock)>1);
     int error = luaL_loadbuffer(__L, buff, strlen(buff), "line") ||
-      lua_pcall(__L, 0, 0, 0);
+      lua_pcall(__L,0,0,0);
     if (error) {
-      fprintf(stderr, "%s\n", lua_tostring(__L, -1));
-      lua_pop(__L, 1);  /* pop error message from the stack */
+      fprintf(stderr,"Error: %s\n", lua_tostring(__L, -1));
+      lua_pop(__L, 1);
     }
-    // --- print prompt --- //
-    
-    // ------ // 
     (*lock)--;
+    fprintf(stderr,"%s",CYBIN_PROMPT);
   }
   static double Process(double sr){
     lua_getglobal(__L,"__process");
     lua_pushnumber(__L,sr);
-    if(lua_pcall(__L,1,1,0)) return 0; // error!!
+    if(lua_pcall(__L,1,1,0)) return 0;
     double result=lua_tonumber(__L,-1);
     lua_pop(__L,1);
     return result;
