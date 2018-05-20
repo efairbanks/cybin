@@ -19,18 +19,12 @@ float process(float sr){
 int main(int argc, char** argv){
   // --- Startup --- //
   Interpreter::Init();
-  if(argc<2) return 0;
-  Interpreter::LoadFile(argv[1]);
+  for(int i=1;i<argc;i++) Interpreter::LoadFile(argv[i]);
   Audio::Init(process,&INTERPRETER_LOCK);
   // --- //
-  int pid=fork();
-  if(!pid) {
-    while (fgets(BUFFER,sizeof(BUFFER),stdin)!=NULL)
-      Interpreter::EventLoop(BUFFER,&INTERPRETER_LOCK);
-      printf("\ncybin> ");
+  while (fgets(BUFFER,sizeof(BUFFER),stdin)!=NULL){
+    Interpreter::EventLoop(BUFFER,&INTERPRETER_LOCK);
   }
-  // --- Loop --- //
-  for(;;) Audio::EventLoop();
   // --- Shutdown  --- //
   Audio::Shutdown();
   Interpreter::Shutdown();
