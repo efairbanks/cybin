@@ -4,6 +4,7 @@
 #include <soundio/soundio.h>
 #include <unistd.h>
 #include "audio.h"
+#include "audiofile.h"
 #include "interpreter.h"
 #define DEBUG_MESSAGES_OFF
 #if defined(DEBUG_MESSAGES_ON)
