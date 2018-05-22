@@ -1,4 +1,4 @@
-require "main"
+require "cybin"
 
 env=Line.new()
 env.duration=0.07
@@ -7,7 +7,7 @@ time=0
 beat=0
 notes={7,0,3,0}
 function __process(sr)
-  cps=4
+  cps=6
   delta=1/sr
   beat=math.floor(time)
   if math.floor(time)~=math.floor(time+cps*delta) then
@@ -21,5 +21,6 @@ function __process(sr)
     beat=beat+1
   end
   time=time+cps*delta
-  return synth:Process(sr)+env:Process(sr)*math.random()*0.05
+  local out=synth:Process(sr)+env:Process(sr)*math.random()*0.05
+  return out,out
 end

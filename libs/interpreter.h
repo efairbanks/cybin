@@ -12,6 +12,7 @@
 class Interpreter{
   static lua_State* __L;
   public:
+  static float CHANNEL_DATA[256];
   static void Init(){
     if(!__L){
       __L=luaL_newstate();
@@ -46,21 +47,28 @@ class Interpreter{
     (*lock)--;
     fprintf(stderr,"%s",CYBIN_PROMPT);
   }
-  static double Process(double sr){
-    double result=0;
+  static float* Process(float samplerate, int numOutChannels){
+    int numLuaChannels=0;
+    int outChannelIndex=0;
     lua_getglobal(__L,"__process");
     if(lua_isfunction(__L, -1)){
-      lua_pushnumber(__L,sr);
-      if(lua_pcall(__L,1,1,0)) return 0;
-      result=lua_tonumber(__L,-1);
-      lua_pop(__L,1);
+      lua_pushnumber(__L,samplerate);
+      if(lua_pcall(__L,1,numOutChannels,0)) return 0;
+      numLuaChannels=lua_gettop(__L);
+      for(int luaChannelIndex=0;luaChannelIndex<numLuaChannels;luaChannelIndex++){
+        while(outChannelIndex>numOutChannels) outChannelIndex-=numOutChannels;
+        CHANNEL_DATA[(numOutChannels-1)-outChannelIndex]=lua_tonumber(__L,-1)+(luaChannelIndex>=numOutChannels?CHANNEL_DATA[outChannelIndex]:0);
+        outChannelIndex++;
+        lua_pop(__L,1);
+      }
     } else lua_pop(__L,1);
-    return result;
+    return CHANNEL_DATA;
   }
   static void Shutdown(){
     if(__L) lua_close(__L);
   }
 };
 lua_State* Interpreter::__L;
+float Interpreter::CHANNEL_DATA[256];
 
 #endif

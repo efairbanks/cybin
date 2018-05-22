@@ -13,7 +13,7 @@ function SinOsc.new()
   return o
 end
 function SinOsc:Process(samplerate)
-  self.phase=self.phase+(math.pi*self.freq/samplerate)
+  self.phase=self.phase+(math.pi*2*self.freq/samplerate)
   return math.sin(self.phase)*self.amp;
 end
 ----------------------
@@ -26,7 +26,7 @@ function PulseOsc.new()
   return o
 end
 function PulseOsc:Process(samplerate)
-  self.phase=self.phase+self.freq*0.5/samplerate
+  self.phase=self.phase+self.freq/samplerate
   while self.phase>1 do self.phase=self.phase-1 end
   if self.phase > self.width then return 1*self.amp else return -1*self.amp end
 end
@@ -40,7 +40,7 @@ function SawOsc.new()
   return o
 end
 function SawOsc:Process(samplerate)
-  self.phase=self.phase+self.freq*0.5/samplerate
+  self.phase=self.phase+self.freq/samplerate
   while self.phase>1 do self.phase=self.phase-1 end
   return (self.phase*2-1)*self.amp
 end
@@ -54,7 +54,7 @@ function TriOsc.new()
   return o
 end
 function TriOsc:Process(samplerate)
-  self.phase=self.phase+self.freq*0.5/samplerate
+  self.phase=self.phase+self.freq/samplerate
   while self.phase>1 do self.phase=self.phase-1 end
   return (math.abs(self.phase-0.5)*4-1)*self.amp
 end
@@ -254,5 +254,3 @@ function Synth:Process(sr)
   end
   return self.filter:Process(output/self.numVoices)
 end
-----------------------
-----------------------

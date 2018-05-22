@@ -39,9 +39,6 @@ class AudioFile{
       if(sf_write_float(file,buffer,sfinfo.channels*sfinfo.frames)!=sfinfo.channels*sfinfo.frames){
         printf("Failed to write all samples to disk.\n");
       }
-      printf("frames: %d\n",sfinfo.frames);
-      printf("samplerate: %d\n",sfinfo.samplerate);
-      printf("channels: %d\n",sfinfo.channels);
       sf_close(file);
     };
 };

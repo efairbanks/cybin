@@ -5,7 +5,7 @@ class Audio{
   static SoundIoDevice* __audio_device;
   static SoundIoOutStream* __audio_oustream;
   static int* __audio_lock;
-  static float (*__audio_callback)(float);
+  static float* (*__audio_callback)(float,int);
   public:
   static void write_callback(struct SoundIoOutStream *__audio_oustream, int frame_count_min, int frame_count_max){
     const struct SoundIoChannelLayout *layout = &__audio_oustream->layout;
@@ -20,9 +20,10 @@ class Audio{
       (*__audio_lock)++;
       while((*__audio_lock)<1);
       for (int frame = 0; frame < frame_count; frame += 1) {
+        float* receivedSamples=__audio_callback?__audio_callback(float_sample_rate,layout->channel_count):0;
         for (int channel = 0; channel < layout->channel_count; channel += 1) {
           float *ptr = (float*)(areas[channel].ptr + areas[channel].step * frame);
-          *ptr = __audio_callback?__audio_callback(float_sample_rate):0;
+          *ptr=receivedSamples[channel];
         }
       }
       (*__audio_lock)--;
@@ -30,7 +31,7 @@ class Audio{
       frames_left -= frame_count;
     }
   }
-  static void Init(float (*callback)(float),int* lock){
+  static void Init(float* (*callback)(float,int),int* lock){
     // --- LibSndIo Setup --- //  
     __audio_lock=lock;
     __audio_callback=callback;
@@ -57,6 +58,6 @@ class Audio{
 SoundIo* Audio::__audio_soundio;
 SoundIoDevice* Audio::__audio_device;
 SoundIoOutStream* Audio::__audio_oustream;
-float (*Audio::__audio_callback)(float);
+float* (*Audio::__audio_callback)(float,int);
 int* Audio::__audio_lock;
 #endif
