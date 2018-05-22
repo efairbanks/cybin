@@ -1,3 +1,5 @@
+require "main"
+
 env=Line.new()
 env.duration=0.07
 synth=Synth.new()
