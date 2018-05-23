@@ -286,7 +286,7 @@ Should be a list of strings."
               (define-key result-map (read-kbd-macro (car key_defn)) (cdr key_defn)))
             '(("C-b" . cybin-send-buffer)
               ("C-e" . cybin-send-paragraph)
-              ("C-c" . cybin-send-line)
+              ("C-c" . cybin-send-current-line)
               ("C-f" . cybin-search-documentation)))
       result-map))
   "Keymap that is used to define keys accessible by `cybin-prefix-key'.
