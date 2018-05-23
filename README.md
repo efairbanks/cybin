@@ -4,6 +4,22 @@
 
 This is Cybin. This is early, unstable, _*alpha*_ software. You've been warned.
 
+## Installation:
+* Make sure you've got a C++ compiler
+* Install [`LuaJIT`](https://github.com/LuaJIT/LuaJIT), [`libsoundio`](https://github.com/andrewrk/libsoundio), and [`LibSndFile`](https://github.com/erikd/libsndfile)
+* Run `./debian_build.sh` or `macos_build.sh` depending on your platform
+* Put `export PATH=$PATH:/path/to/cybin/root/directory` in your `.bash_profile` or other shell startup file
+
+## Optional
+* Install Emacs
+* Place the following into your Emacs init file (`~/.emacs`, `~/.emacs.el`, or `~/.emacs.d/init.el`)
+```
+(add-to-list 'load-path "/Users/ericfai/Cybin")
+(autoload 'cybin-mode "cybin-mode" "Cybin editing mode." t)
+(add-to-list 'auto-mode-alist '("\\.cybin$" . cybin-mode))
+(add-to-list 'interpreter-mode-alist '("cybin" . cybin-mode))
+```
+
 ## Goals:
 
 * Few dependencies (relatively speaking) _(done)_
@@ -20,5 +36,6 @@ This is Cybin. This is early, unstable, _*alpha*_ software. You've been warned.
 * Mind-blowing demos and example code _(tbd)_
 
 ## Dependencies
-* LuaJIT
-* LibSoundIO
+* [LuaJIT](https://github.com/LuaJIT/LuaJIT)
+* [libsoundio](https://github.com/andrewrk/libsoundio)
+* [libsndfile](https://github.com/erikd/libsndfile)

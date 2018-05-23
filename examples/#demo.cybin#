@@ -47,6 +47,8 @@ function __process(sr)
    return out,out
 end
 
+print(m.time)
+
 function play()
    offset=0
    note=notes[beat%#notes+1]+offset  
@@ -57,3 +59,4 @@ function play()
    -- print(beat)
    beat=beat+1
 end
+
