@@ -6,8 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <lua.hpp>
+#include <unistd.h>
 
 #define CYBIN_PROMPT "cybin> "
+#define CYBIN_INIT "package.path=\"./?.cybin;\"..package.path"
+#define CYBIN_LOGOTEXT "      ___                                                 ___\n     /  /\\          ___        _____        ___          /__/\\\n    /  /:/         /__/|      /  /::\\      /  /\\         \\  \\:\\\n   /  /:/         |  |:|     /  /:/\\:\\    /  /:/          \\  \\:\\\n  /  /:/  ___     |  |:|    /  /:/~/::\\  /__/::\\      _____\\__\\:\\\n /__/:/  /  /\\  __|__|:|   /__/:/ /:/\\:| \\__\\/\\:\\__  /__/::::::::\\\n \\  \\:\\ /  /:/ /__/::::\\   \\  \\:\\/:/~/:/    \\  \\:\\/\\ \\  \\:\\~~\\~~\\/\n  \\  \\:\\  /:/     ~\\~~\\:\\   \\  \\::/ /:/      \\__\\::/  \\  \\:\\  ~~~\n   \\  \\:\\/:/        \\  \\:\\   \\  \\:\\/:/       /__/:/    \\  \\:\\\n    \\  \\::/          \\__\\/    \\  \\::/        \\__\\/      \\  \\:\\\n     \\__\\/                     \\__\\/                     \\__\\/\n"
 
 class Interpreter{
   static lua_State* __L;
@@ -17,6 +20,9 @@ class Interpreter{
     if(!__L){
       __L=luaL_newstate();
       luaL_openlibs(__L);
+      luaL_loadbuffer(__L,CYBIN_INIT,strlen(CYBIN_INIT),"line");
+      lua_pcall(__L,0,0,0);
+      fprintf(stderr,"%s\n",CYBIN_LOGOTEXT);
       fprintf(stderr,"%s",CYBIN_PROMPT);
     }
   }

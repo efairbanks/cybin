@@ -6,6 +6,7 @@ synth=Synth.new()
 time=0
 beat=0
 notes={7,0,3,0}
+
 function __process(sr)
   cps=6
   delta=1/sr

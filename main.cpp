@@ -13,7 +13,7 @@
 #else
 #define DEBUG(MSG)
 #endif
-char BUFFER[512];
+char BUFFER[4096];
 int INTERPRETER_LOCK=0;
 float* process(float sr,int numOutChannels){
   return Interpreter::Process(sr,numOutChannels);
