@@ -54,6 +54,7 @@ function play()
    if beat%4==2 then synth:PlayNote(note+53+offset) end
    if beat%8==6 or beat%8==0 then synth:PlayNote(offset+36); synth:PlayNote(offset+48) end
    -- uncomment print to see time
-   -- print(beat)
+   --print(beat)
    beat=beat+1
 end
+

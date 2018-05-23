@@ -6,15 +6,17 @@ This is Cybin. This is early, unstable, _*alpha*_ software. You've been warned.
 
 ## Installation:
 * Make sure you've got a C++ compiler
-* Install [`LuaJIT`](https://github.com/LuaJIT/LuaJIT), [`libsoundio`](https://github.com/andrewrk/libsoundio), and [`LibSndFile`](https://github.com/erikd/libsndfile)
+* Install [`LuaJIT`](https://github.com/LuaJIT/LuaJIT), [`libsoundio`](https://github.com/andrewrk/libsoundio), and [`libsndfile`](https://github.com/erikd/libsndfile)
+* Install [`git`](https://git-scm.com/)
+* Run `cd && git clone https://github.com/efairbanks/Cybin.git && cd Cybin`
 * Run `./debian_build.sh` or `macos_build.sh` depending on your platform
-* Put `export PATH=$PATH:/path/to/cybin/root/directory` in your `.bash_profile` or other shell startup file
+* Put `export PATH=$PATH:~/Cybin` in your `.bash_profile` or other shell startup file
 
 ## Optional
-* Install Emacs
+* Install [`Emacs`](https://www.gnu.org/software/emacs/)
 * Place the following into your Emacs init file (`~/.emacs`, `~/.emacs.el`, or `~/.emacs.d/init.el`)
 ```
-(add-to-list 'load-path "/Users/ericfai/Cybin")
+(add-to-list 'load-path "~/Cybin")
 (autoload 'cybin-mode "cybin-mode" "Cybin editing mode." t)
 (add-to-list 'auto-mode-alist '("\\.cybin$" . cybin-mode))
 (add-to-list 'interpreter-mode-alist '("cybin" . cybin-mode))
