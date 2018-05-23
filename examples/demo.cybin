@@ -1,27 +1,57 @@
 require "cybin"
 
-env=Line.new()
-env.duration=0.07
+-- simple event scheduler
+Metro={events={},time=0}
+Metro.__index=Metro
+function Metro.new()
+   local o={}
+   setmetatable(o,Metro)
+   return o
+end
+function Metro:Process(sr)
+   local rmindices={}
+   local now=self.time
+   for i=1,#self.events do
+      if self.time>self.events[i].start then
+	 self.events[i].func()
+	 table.insert(rmindices,i)
+      end
+   end
+   for i=1,#rmindices do
+      table.remove(self.events,rmindices[i])
+   end
+   self.time=self.time+1/sr
+   return now
+end
+function Metro:Event(start,func)
+   table.insert(self.events,{start=start,func=func})
+end
+
+-- it's synth time
 synth=Synth.new()
-time=0
+-- keep track of the beat
 beat=0
+-- arp
 notes={7,0,3,0}
 
+-- init event scheduler with some temporal recursion
+if m~=nil then m.events={} end -- clear events so we don't do something crazy
+m=Metro.new()
+function trecurse()
+   offset=0
+   note=notes[beat%#notes+1]+offset  
+   synth:PlayNote(note+60+offset)
+   if beat%4==2 then synth:PlayNote(note+53+offset) end
+   if beat%8==6 or beat%8==0 then synth:PlayNote(offset+36); synth:PlayNote(offset+48) end
+   -- uncomment print to see time
+   --print(beat)
+   beat=beat+1
+   m:Event(m.time+1/6,trecurse)
+end
+m:Event(m.time+1,trecurse)
+-- audio rate processing
 function __process(sr)
-  cps=6
-  delta=1/sr
-  beat=math.floor(time)
-  if math.floor(time)~=math.floor(time+cps*delta) then
-    -- do on-beat stuff
-    note=notes[beat%#notes+1]
-    offset=(math.floor(beat/8)*5)%12
-    synth:PlayNote(note+60+offset)
-    if beat%4==2 then synth:PlayNote(note+53+offset) end
-    if beat%8==6 or beat%8==0 then synth:PlayNote(offset+36); synth:PlayNote(offset+48) end
-    if beat%8==4 then env:Reset() end
-    beat=beat+1
-  end
-  time=time+cps*delta
-  local out=synth:Process(sr)+env:Process(sr)*math.random()*0.05
-  return out,out
+   m:Process(sr)
+   local out=synth:Process(sr)
+   return out,out
 end
