@@ -4,11 +4,11 @@
 #include <string.h>
 #include <soundio/soundio.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "libs/audio.h"
 #include "libs/audiofile.h"
 #include "libs/interpreter.h"
 #include "libs/util.h"
-char COMMAND_BUFFER[1048576];
 float* __process(float sr,int numOutChannels){
   return Interpreter::Process(sr,numOutChannels);
 }
@@ -19,6 +19,10 @@ struct{
   int channels;
   char* outfile;
 } Config;
+typedef struct{
+  char COMMAND_BUFFER[1048576];
+  int dirty=0;
+} SharedInput;
 void parse_args(int argc, char** argv){
   Config.offline=false;
   Config.duration=10;
@@ -75,6 +79,17 @@ int cybin_loadaudiofile(lua_State* L){
   lua_pushstring(L,"samplerate");lua_pushnumber(L,file.sampleRate);lua_settable(L,-3);
   return 1;
 }
+void* input_handler(void* data){
+  SharedInput* input=(SharedInput*)data;
+  // input handlng thread
+  for(;;){
+    if(!input->dirty){
+      fgets(input->COMMAND_BUFFER,sizeof(input->COMMAND_BUFFER),stdin);
+      DEBUG("BUFFER DIRTY!");
+      input->dirty=true;
+    }
+  }
+}
 int main(int argc, char** argv){
   // --- Start Lua --- //
   Interpreter::Init();
@@ -99,14 +114,18 @@ int main(int argc, char** argv){
     // --- Continue startup --- //
     Audio::Init(__process);
     // --- Handle REPL event loop --- //
-    while (fgets(COMMAND_BUFFER,sizeof(COMMAND_BUFFER),stdin)!=NULL){
-      Interpreter::EventLoop(COMMAND_BUFFER);
-      Audio::EventLoop();
-    }
+    SharedInput Input;
+    pthread_t input_handler_thread;
+    pthread_create(&input_handler_thread,NULL,input_handler,(void*)&Input);
     for(;;){
-      usleep(10000000/50);
+      if(Input.dirty){
+        Interpreter::EventLoop(Input.COMMAND_BUFFER);
+        Input.dirty=false;
+        DEBUG("BUFFER CLEAN!");
+      }
+      Audio::EventLoop();
+      usleep(10000000/100);
     }
-    
     // --- Shutdown  --- //
     Audio::Shutdown();
   }
