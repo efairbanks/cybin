@@ -4,3 +4,5 @@ a.out
 *.wav
 *.o
 *.out
+.DS_Store
+*#

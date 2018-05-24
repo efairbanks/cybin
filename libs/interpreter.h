@@ -7,9 +7,10 @@
 #include <string.h>
 #include <lua.hpp>
 #include <unistd.h>
+#include "util.h"
 
 #define CYBIN_PROMPT "cybin> "
-#define CYBIN_INIT "package.path=\"./?.cybin;\"..package.path"
+#define CYBIN_INIT "package.path=\"./?.cybin;\"..package.path;cybin={};"
 #define CYBIN_LOGOTEXT "      ___                                                 ___\n     /  /\\          ___        _____        ___          /__/\\\n    /  /:/         /__/|      /  /::\\      /  /\\         \\  \\:\\\n   /  /:/         |  |:|     /  /:/\\:\\    /  /:/          \\  \\:\\\n  /  /:/  ___     |  |:|    /  /:/~/::\\  /__/::\\      _____\\__\\:\\\n /__/:/  /  /\\  __|__|:|   /__/:/ /:/\\:| \\__\\/\\:\\__  /__/::::::::\\\n \\  \\:\\ /  /:/ /__/::::\\   \\  \\:\\/:/~/:/    \\  \\:\\/\\ \\  \\:\\~~\\~~\\/\n  \\  \\:\\  /:/     ~\\~~\\:\\   \\  \\::/ /:/      \\__\\::/  \\  \\:\\  ~~~\n   \\  \\:\\/:/        \\  \\:\\   \\  \\:\\/:/       /__/:/    \\  \\:\\\n    \\  \\::/          \\__\\/    \\  \\::/        \\__\\/      \\  \\:\\\n     \\__\\/                     \\__\\/                     \\__\\/\n"
 
 class Interpreter{
@@ -29,17 +30,24 @@ class Interpreter{
   static void LoadFile(char* filename){
     if(__L) {
       if(luaL_loadfile(__L,filename)){
-        fprintf(stderr,"Error: %s\n", lua_tostring(__L,-1));
+        ERROR("%s", lua_tostring(__L,-1));
         lua_pop(__L,1);
         fprintf(stderr,"%s",CYBIN_PROMPT);
       } else {
         if(lua_pcall(__L,0,0,0)) {
-          fprintf(stderr,"Error: %s\n", lua_tostring(__L,-1));
+          ERROR("%s", lua_tostring(__L,-1));
           lua_pop(__L,1);
           fprintf(stderr,"%s",CYBIN_PROMPT);
         }
       }
     }
+  }
+  static void LoadFunction(char* name, int (*function)(lua_State* L)){
+    lua_getglobal(__L,"cybin");
+    lua_pushstring(__L,name);
+    lua_pushcfunction(__L,function);
+    lua_settable(__L,-3);
+    lua_pop(__L,1);
   }
   static void EventLoop(char* buff,int* lock){
     (*lock)++;
@@ -47,7 +55,7 @@ class Interpreter{
     int error = luaL_loadbuffer(__L, buff, strlen(buff), "line") ||
       lua_pcall(__L,0,0,0);
     if (error) {
-      fprintf(stderr,"Error: %s\n", lua_tostring(__L, -1));
+      ERROR("%s", lua_tostring(__L, -1));
       lua_pop(__L, 1);
     }
     (*lock)--;

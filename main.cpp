@@ -7,15 +7,10 @@
 #include "libs/audio.h"
 #include "libs/audiofile.h"
 #include "libs/interpreter.h"
-#define DEBUG_MESSAGES_OFF
-#if defined(DEBUG_MESSAGES_ON)
-#define DEBUG(MSG) printf(MSG); printf("\n")
-#else
-#define DEBUG(MSG)
-#endif
-char BUFFER[1048576];
+#include "libs/util.h"
+char COMMAND_BUFFER[1048576];
 int INTERPRETER_LOCK=0;
-float* process(float sr,int numOutChannels){
+float* __process(float sr,int numOutChannels){
   return Interpreter::Process(sr,numOutChannels);
 }
 struct{
@@ -58,15 +53,34 @@ void parse_args(int argc, char** argv){
 int print_progress(int n, int d, int width, int last){
   int index=n*width/d;
   if(index!=last){
-    printf("\ncybin> [");
+    printf("\n%s [",CYBIN_PROMPT);
     for(int i=0;i<width;i++) printf(i>index?" ":"#");
     printf("]");
   }
   return index;
 }
+int cybin_loadaudiofile(lua_State* L){
+  const char* fileName = lua_tostring(L,1);
+  AudioFile file(fileName);
+  if(file.buffer==NULL) return 0;
+  lua_newtable(L);
+  DEBUG("stack top: %d",lua_gettop(L));
+  for(int i=0;i<file.frames*file.channels;i++){
+    lua_pushnumber(L,i+1);
+    lua_pushnumber(L,i);
+    lua_settable(L,-3);
+  }
+  DEBUG("stack top: %d",lua_gettop(L));
+  lua_pushstring(L,"frames");lua_pushnumber(L,file.frames);lua_settable(L,-3);
+  lua_pushstring(L,"channels");lua_pushnumber(L,file.channels);lua_settable(L,-3);
+  lua_pushstring(L,"samplerate");lua_pushnumber(L,file.sampleRate);lua_settable(L,-3);
+  return 1;
+}
 int main(int argc, char** argv){
   // --- Start Lua --- //
   Interpreter::Init();
+  // --- Register cybin.loadaudiofile --- //
+  Interpreter::LoadFunction("loadaudiofile",cybin_loadaudiofile);
   // --- Configure environment --- //
   parse_args(argc,argv);
   if(Config.offline) {   // --- OFFLINE RENDERING ---- //
@@ -81,14 +95,15 @@ int main(int argc, char** argv){
     }
     AudioFile file(buffer,Config.duration*Config.samplerate,Config.channels,Config.samplerate);
     file.Write(Config.outfile);
-    printf("\ncybin> Wrote audio to %s\n",Config.outfile);
+    printf("\n%s Wrote audio to %s\n",CYBIN_PROMPT,Config.outfile);
   } else {        // --- REALTIME RENDERING --- //
     // --- Continue startup --- //
-    Audio::Init(process,&INTERPRETER_LOCK);
+    Audio::Init(__process,&INTERPRETER_LOCK);
     // --- Handle REPL event loop --- //
-    while (fgets(BUFFER,sizeof(BUFFER),stdin)!=NULL){
-      Interpreter::EventLoop(BUFFER,&INTERPRETER_LOCK);
+    while (fgets(COMMAND_BUFFER,sizeof(COMMAND_BUFFER),stdin)!=NULL){
+      Interpreter::EventLoop(COMMAND_BUFFER,&INTERPRETER_LOCK);
     }
+    
     // --- Shutdown  --- //
     Audio::Shutdown();
   }
