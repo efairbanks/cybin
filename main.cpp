@@ -9,7 +9,6 @@
 #include "libs/interpreter.h"
 #include "libs/util.h"
 char COMMAND_BUFFER[1048576];
-int INTERPRETER_LOCK=0;
 float* __process(float sr,int numOutChannels){
   return Interpreter::Process(sr,numOutChannels);
 }
@@ -67,7 +66,7 @@ int cybin_loadaudiofile(lua_State* L){
   DEBUG("stack top: %d",lua_gettop(L));
   for(int i=0;i<file.frames*file.channels;i++){
     lua_pushnumber(L,i+1);
-    lua_pushnumber(L,i);
+    lua_pushnumber(L,file.buffer[i]);
     lua_settable(L,-3);
   }
   DEBUG("stack top: %d",lua_gettop(L));
@@ -98,10 +97,14 @@ int main(int argc, char** argv){
     printf("\n%s Wrote audio to %s\n",CYBIN_PROMPT,Config.outfile);
   } else {        // --- REALTIME RENDERING --- //
     // --- Continue startup --- //
-    Audio::Init(__process,&INTERPRETER_LOCK);
+    Audio::Init(__process);
     // --- Handle REPL event loop --- //
     while (fgets(COMMAND_BUFFER,sizeof(COMMAND_BUFFER),stdin)!=NULL){
-      Interpreter::EventLoop(COMMAND_BUFFER,&INTERPRETER_LOCK);
+      Interpreter::EventLoop(COMMAND_BUFFER);
+      Audio::EventLoop();
+    }
+    for(;;){
+      usleep(10000000/50);
     }
     
     // --- Shutdown  --- //
