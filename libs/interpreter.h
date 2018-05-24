@@ -49,16 +49,13 @@ class Interpreter{
     lua_settable(__L,-3);
     lua_pop(__L,1);
   }
-  static void EventLoop(char* buff,int* lock){
-    (*lock)++;
-    while((*lock)>1);
+  static void EventLoop(char* buff){
     int error = luaL_loadbuffer(__L, buff, strlen(buff), "line") ||
       lua_pcall(__L,0,0,0);
     if (error) {
       ERROR("%s", lua_tostring(__L, -1));
       lua_pop(__L, 1);
     }
-    (*lock)--;
     fprintf(stderr,"%s",CYBIN_PROMPT);
   }
   static float* Process(float samplerate, int numOutChannels){

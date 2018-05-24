@@ -4,12 +4,11 @@
 #include <string.h>
 #include <soundio/soundio.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "libs/audio.h"
 #include "libs/audiofile.h"
 #include "libs/interpreter.h"
 #include "libs/util.h"
-char COMMAND_BUFFER[1048576];
-int INTERPRETER_LOCK=0;
 float* __process(float sr,int numOutChannels){
   return Interpreter::Process(sr,numOutChannels);
 }
@@ -20,6 +19,10 @@ struct{
   int channels;
   char* outfile;
 } Config;
+typedef struct{
+  char COMMAND_BUFFER[1048576];
+  int dirty=0;
+} SharedInput;
 void parse_args(int argc, char** argv){
   Config.offline=false;
   Config.duration=10;
@@ -67,7 +70,7 @@ int cybin_loadaudiofile(lua_State* L){
   DEBUG("stack top: %d",lua_gettop(L));
   for(int i=0;i<file.frames*file.channels;i++){
     lua_pushnumber(L,i+1);
-    lua_pushnumber(L,i);
+    lua_pushnumber(L,file.buffer[i]);
     lua_settable(L,-3);
   }
   DEBUG("stack top: %d",lua_gettop(L));
@@ -75,6 +78,17 @@ int cybin_loadaudiofile(lua_State* L){
   lua_pushstring(L,"channels");lua_pushnumber(L,file.channels);lua_settable(L,-3);
   lua_pushstring(L,"samplerate");lua_pushnumber(L,file.sampleRate);lua_settable(L,-3);
   return 1;
+}
+void* input_handler(void* data){
+  SharedInput* input=(SharedInput*)data;
+  // input handlng thread
+  for(;;){
+    if(!input->dirty){
+      fgets(input->COMMAND_BUFFER,sizeof(input->COMMAND_BUFFER),stdin);
+      DEBUG("BUFFER DIRTY!");
+      input->dirty=true;
+    }
+  }
 }
 int main(int argc, char** argv){
   // --- Start Lua --- //
@@ -98,12 +112,20 @@ int main(int argc, char** argv){
     printf("\n%s Wrote audio to %s\n",CYBIN_PROMPT,Config.outfile);
   } else {        // --- REALTIME RENDERING --- //
     // --- Continue startup --- //
-    Audio::Init(__process,&INTERPRETER_LOCK);
+    Audio::Init(__process);
     // --- Handle REPL event loop --- //
-    while (fgets(COMMAND_BUFFER,sizeof(COMMAND_BUFFER),stdin)!=NULL){
-      Interpreter::EventLoop(COMMAND_BUFFER,&INTERPRETER_LOCK);
+    SharedInput Input;
+    pthread_t input_handler_thread;
+    pthread_create(&input_handler_thread,NULL,input_handler,(void*)&Input);
+    for(;;){
+      if(Input.dirty){
+        Interpreter::EventLoop(Input.COMMAND_BUFFER);
+        Input.dirty=false;
+        DEBUG("BUFFER CLEAN!");
+      }
+      Audio::EventLoop();
+      usleep(10000000/100);
     }
-    
     // --- Shutdown  --- //
     Audio::Shutdown();
   }
