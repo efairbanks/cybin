@@ -23,8 +23,11 @@ This is Cybin. This is ~~early, unstable, _**alpha**_ software~~ actually relati
 ```
 ### Emacs Hotkeys
 `C-c C-c` -> `execute line`
+
 `C-c C-b` -> `execute file`
+
 `C-c C-e` -> `execute block/paragraph`
+
 **caveats:** _There's currently a pretty low limit to the number of characters you can send to the Cybin interpreter at a time, so watch out or it'll puke all over the place. Note the separation of code blocks in demo.cybin._
 
 ## Goals:
