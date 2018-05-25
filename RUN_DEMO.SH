@@ -1,3 +1,3 @@
 #!/bin/sh
 cd examples
-../cybin demo.lua
+../cybin demo.cybin
