@@ -1,6 +1,6 @@
 # Cybin
 
-[![CYBIN_V0.0_DEMO](http://ericfairbanks.org/cybin.png)](https://www.youtube.com/watch?v=aEwmsLO0rBU)
+[![CYBIN_V0.0_DEMO](https://github.com/efairbanks/Cybin/blob/master/cybin.png?raw=true)](https://www.youtube.com/watch?v=aEwmsLO0rBU)
 
 This is Cybin. This is ~~early, unstable, _**alpha**_ software~~ actually relatively stable now and comes with some decent utilities.
 
