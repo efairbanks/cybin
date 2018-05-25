@@ -66,7 +66,8 @@ end
 -- sequence or something
 prcnt=0
 function play()
-   if math.random() > 0.6
+   if math.random()>0.8 then s.speed=-s.speed end
+   if math.random()>0.6
    then
       prcnt=prcnt+(math.floor(math.random()*16)/16)
       if math.random()>0.5 then s.speed=s.speed*0.75 else s.speed=s.speed*1.1 end

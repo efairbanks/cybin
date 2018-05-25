@@ -20,6 +20,7 @@ class Interpreter{
   static void Init(){
     if(!__L){
       __L=luaL_newstate();
+      luaJIT_setmode(__L, 0, LUAJIT_MODE_ENGINE);
       luaL_openlibs(__L);
       luaL_loadbuffer(__L,CYBIN_INIT,strlen(CYBIN_INIT),"line");
       lua_pcall(__L,0,0,0);

@@ -124,7 +124,7 @@ int main(int argc, char** argv){
         DEBUG("BUFFER CLEAN!");
       }
       Audio::EventLoop();
-      usleep(10000000/100);
+      usleep(10000000/10000);
     }
     // --- Shutdown  --- //
     Audio::Shutdown();
