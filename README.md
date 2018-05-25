@@ -2,7 +2,7 @@
 
 [![CYBIN_V0.0_DEMO](https://img.youtube.com/vi/aEwmsLO0rBU/0.jpg)](https://www.youtube.com/watch?v=aEwmsLO0rBU)
 
-This is Cybin. This is ~~early, unstable, _*alpha*_ software~~ actually relatively stabel now and comes with some decent utilities.
+This is Cybin. This is ~~early, unstable, _**alpha**_ software~~ actually relatively stabel now and comes with some decent utilities.
 
 ## Installation:
 * Make sure you've got a C++ compiler
@@ -21,6 +21,11 @@ This is Cybin. This is ~~early, unstable, _*alpha*_ software~~ actually relative
 (add-to-list 'auto-mode-alist '("\\.cybin$" . cybin-mode))
 (add-to-list 'interpreter-mode-alist '("cybin" . cybin-mode))
 ```
+### Emacs Hotkeys
+`C-c C-c` -> `execute line`
+`C-c C-b` -> `execute file`
+`C-c C-e` -> `execute block/paragraph`
+**caveats:** _There's currently a pretty low limit to the number of characters you can send to the Cybin interpreter at a time, so watch out or it'll puke all over the place. Note the separation of code blocks in demo.cybin._
 
 ## Goals:
 
