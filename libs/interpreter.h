@@ -59,12 +59,22 @@ class Interpreter{
     fprintf(stderr,"%s",CYBIN_PROMPT);
   }
   static float* Process(float samplerate, int numOutChannels){
+    //return CHANNEL_DATA;
     int numLuaChannels=0;
     int outChannelIndex=0;
     lua_getglobal(__L,"__process");
     if(lua_isfunction(__L, -1)){
       lua_pushnumber(__L,samplerate);
-      if(lua_pcall(__L,1,numOutChannels,0)) return 0;
+      switch(lua_pcall(__L,1,numOutChannels,0)){
+        case LUA_ERRRUN:
+          fprintf(stderr,"%s\nError: __process threw an unrecoverable error and has been reset.\n", lua_tostring(__L, -1));
+          lua_pop(__L, 1);
+          luaL_dostring(__L,"__process=nil");
+          return CHANNEL_DATA;
+        case LUA_ERRMEM:fprintf(stderr,"MEMORY ALLOCATION ERROR\n");return 0;
+        case LUA_ERRERR:fprintf(stderr,"ERROR HANDLING ERROR\n");return 0;
+        default:break;
+      }
       numLuaChannels=lua_gettop(__L);
       for(int luaChannelIndex=0;luaChannelIndex<numLuaChannels;luaChannelIndex++){
         while(outChannelIndex>numOutChannels) outChannelIndex-=numOutChannels;

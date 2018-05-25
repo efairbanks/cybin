@@ -8,8 +8,8 @@ class Audio{
   static SoundIoOutStream* _audio_oustream;
   static int _audio_lock;
   static float* (*_audio_callback)(float,int);
-  static int _play_head;
-  static int _write_head;
+  static unsigned long int _play_head;
+  static unsigned long int _write_head;
   public:
   static void write_callback(struct SoundIoOutStream *_audio_oustream, int frame_count_min, int frame_count_max){
     const struct SoundIoChannelLayout *layout = &_audio_oustream->layout;
@@ -74,8 +74,8 @@ class Audio{
   }
 };
 float Audio::_RING_BUFFER[AUDIO_H_RINGBUFFER_SIZE];
-int Audio::_play_head;
-int Audio::_write_head;
+unsigned long int Audio::_play_head;
+unsigned long int Audio::_write_head;
 SoundIo* Audio::_audio_soundio;
 SoundIoDevice* Audio::_audio_device;
 SoundIoOutStream* Audio::_audio_oustream;

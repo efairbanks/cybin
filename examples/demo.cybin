@@ -26,6 +26,7 @@ function Metro:Event(start,func)
    table.insert(self.events,{start=start,func=func})
 end
 
+
 -- it's synth time
 synth=Synth.new()
 -- keep track of the beat
@@ -39,22 +40,53 @@ function trecurse()
    if play~=nil then play() end
    m:Event(m.time+1/6,trecurse)
 end
-m:Event(m.time+1,trecurse)
+m:Event(m.time,trecurse)
+-- load up some breakbeaaats
+s=cybin.loadaudiofile("AMEN.AIFF")
+s.speed=1
+s.Process=function(self,sr)
+   if self.sindex==nil then self.sindex=0 else self.sindex=self.sindex+self.speed end
+   while self.sindex>self.frames do self.sindex=self.sindex-self.frames end
+   return self[math.floor(self.sindex)*self.channels+0],self[math.floor(self.sindex)*self.channels+1]
+end
+
+
 -- audio rate processing
 function __process(sr)
    m:Process(sr)
-   local out=synth:Process(sr)
-   return out,out
+   local center=synth:Process(sr) or 0
+   local left,right=s:Process(sr)
+   s.scoef=s.samplerate/sr
+   left = left or 0
+   right = right or 0
+   left=math.atan((left+center*6)*5)
+   right=math.atan((right+center*6)*5)
+   return left,right
 end
-
+-- sequence or something
+prcnt=0
 function play()
-   offset=0
-   note=notes[beat%#notes+1]+offset  
-   synth:PlayNote(note+60+offset)
-   if beat%4==2 then synth:PlayNote(note+53+offset) end
-   if beat%8==6 or beat%8==0 then synth:PlayNote(offset+36); synth:PlayNote(offset+48) end
-   -- uncomment print to see time
-   --print(beat)
+   if math.random() > 0.6
+   then
+      prcnt=prcnt+(math.floor(math.random()*16)/16)
+      if math.random()>0.5 then s.speed=s.speed*0.75 else s.speed=s.speed*1.1 end
+   else
+      prcnt=prcnt+(1/16)
+      s.speed=s.scoef or 1
+   end
+   while prcnt>1 do prcnt=prcnt-1 end
+   s.sindex=math.floor(prcnt*s.frames)
+   local notes={40,39}
+   local nindex=math.mod(math.floor(beat/32),2)+1
+   synth:PlayNote(notes[nindex])
    beat=beat+1
 end
 
+--current license
+--social security card
+--expired passport
+--birth certificate
+--rental insurance (information sheet)
+--insurance statement (car insurance)
+--latest credit card statement
+--completed application
