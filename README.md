@@ -2,7 +2,7 @@
 
 [![CYBIN_V0.0_DEMO](https://img.youtube.com/vi/aEwmsLO0rBU/0.jpg)](https://www.youtube.com/watch?v=aEwmsLO0rBU)
 
-This is Cybin. This is ~~early, unstable, _**alpha**_ software~~ actually relatively stabel now and comes with some decent utilities.
+This is Cybin. This is ~~early, unstable, _**alpha**_ software~~ actually relatively stable now and comes with some decent utilities.
 
 ## Installation:
 * Make sure you've got a C++ compiler
