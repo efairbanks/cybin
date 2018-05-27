@@ -43,7 +43,7 @@ function __process(sr)
    while rindex>s.frames do rindex=rindex-s.frames end
    left = left or 0
    right = right or 0
-   return left+center,right+center
+   return (left+center)*0.8,(right+center)*0.8
 end
 
 -- sequence or something
@@ -68,12 +68,3 @@ function play()
    end
    beat=beat+1
 end
-
---current license
---social security card
---expired passport
---birth certificate
---rental insurance (information sheet)
---insurance statement (car insurance)
---latest credit card statement
---completed application
