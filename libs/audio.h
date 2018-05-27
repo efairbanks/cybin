@@ -1,6 +1,6 @@
 #ifndef AUDIO_H
 #define AUDIO_H
-#define AUDIO_H_RINGBUFFER_SIZE 83160
+#define AUDIO_H_RINGBUFFER_SIZE 4096
 class Audio{
   static float _RING_BUFFER[AUDIO_H_RINGBUFFER_SIZE];
   static SoundIo* _audio_soundio;

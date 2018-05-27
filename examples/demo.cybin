@@ -1,32 +1,4 @@
 require "cybin"
--- simple event scheduler
-Metro={events={},time=0}
-Metro.__index=Metro
-function Metro.new()
-   local o={}
-   setmetatable(o,Metro)
-   return o
-end
-function Metro:Process(sr)
-   local rmindices={}
-   local now=self.time
-   for i=1,#self.events do
-      if self.time>self.events[i].start then
-	 self.events[i].func()
-	 table.insert(rmindices,i)
-      end
-   end
-   for i=1,#rmindices do
-      table.remove(self.events,rmindices[i])
-   end
-   self.time=self.time+1/sr
-   return now
-end
-function Metro:Event(start,func)
-   table.insert(self.events,{start=start,func=func})
-end
-
-
 -- it's synth time
 synth=Synth.new()
 -- keep track of the beat
@@ -50,24 +22,36 @@ s.Process=function(self,sr)
    return self[math.floor(self.sindex)*self.channels+0],self[math.floor(self.sindex)*self.channels+1]
 end
 
-
 -- audio rate processing
+rindex=0
+fuckery=false
 function __process(sr)
    m:Process(sr)
    local center=synth:Process(sr) or 0
    local left,right=s:Process(sr)
    s.scoef=s.samplerate/sr
+   if fuckery then
+      s[(s.sindex+s.frames/64)*2]=left
+      s[(s.sindex+s.frames/64)*2+1]=right
+      --s[rindex*2]=left
+      --s[rindex*2+1]=right
+   else
+      s[s.sindex*2]=left
+      s[s.sindex*2+1]=right
+   end
+   rindex=rindex+1
+   while rindex>s.frames do rindex=rindex-s.frames end
    left = left or 0
    right = right or 0
-   left=math.atan((left+center*6)*5)
-   right=math.atan((right+center*6)*5)
-   return left,right
+   return left+center,right+center
 end
+
 -- sequence or something
 prcnt=0
 function play()
+   if math.random()>0.95 then fuckery=true else fuckery=false end
    if math.random()>0.8 then s.speed=-s.speed end
-   if math.random()>0.6
+   if math.random()>0.5
    then
       prcnt=prcnt+(math.floor(math.random()*16)/16)
       if math.random()>0.5 then s.speed=s.speed*0.75 else s.speed=s.speed*1.1 end
@@ -79,7 +63,9 @@ function play()
    s.sindex=math.floor(prcnt*s.frames)
    local notes={40,39}
    local nindex=math.mod(math.floor(beat/32),2)+1
-   synth:PlayNote(notes[nindex])
+   for i=1,10 do
+      synth:PlayNote(notes[nindex]+i*7)
+   end
    beat=beat+1
 end
 

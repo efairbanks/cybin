@@ -254,3 +254,30 @@ function Synth:Process(sr)
   end
   return self.filter:Process(output/self.numVoices)
 end
+----------------------
+----------------------
+Metro={events={},time=0}
+Metro.__index=Metro
+function Metro.new()
+   local o={}
+   setmetatable(o,Metro)
+   return o
+end
+function Metro:Process(sr)
+   local rmindices={}
+   local now=self.time
+   for i=1,#self.events do
+      if self.time>self.events[i].start then
+	 self.events[i].func()
+	 table.insert(rmindices,i)
+      end
+   end
+   for i=1,#rmindices do
+      table.remove(self.events,rmindices[i])
+   end
+   self.time=self.time+1/sr
+   return now
+end
+function Metro:Event(start,func)
+   table.insert(self.events,{start=start,func=func})
+end
