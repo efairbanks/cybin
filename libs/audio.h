@@ -1,6 +1,6 @@
 #ifndef AUDIO_H
 #define AUDIO_H
-#define AUDIO_H_DEFAULT_RINGBUFFER_SIZE 768000
+#define AUDIO_H_DEFAULT_RINGBUFFER_SIZE 4096
 class Audio{
   static float* _ringbuffer;
   static int _ringbuffer_size;
@@ -21,7 +21,7 @@ class Audio{
     _audio_lock++;
     while(_audio_lock>1);
     // --- //
-    if(frame_count_max*layout->channel_count*sizeof(float)>_ringbuffer_size){
+    if(frame_count_max*layout->channel_count>_ringbuffer_size){
       _ringbuffer_size=frame_count_max*layout->channel_count;
       _ringbuffer=(float*)realloc(_ringbuffer,_ringbuffer_size*sizeof(float));
       _play_head=_ringbuffer_size/2;
@@ -36,7 +36,7 @@ class Audio{
       for (int frame = 0; frame < frame_count; frame += 1) {
         for (int channel = 0; channel < layout->channel_count; channel += 1) {
           float *ptr = (float*)(areas[channel].ptr + areas[channel].step * frame);
-          *ptr=_ringbuffer[_play_head%AUDIO_H_DEFAULT_RINGBUFFER_SIZE];
+          *ptr=_ringbuffer[_play_head%_ringbuffer_size];
           _play_head++;
         }
       }
@@ -78,7 +78,7 @@ class Audio{
     while(_write_head<_play_head){
       float* samples=_audio_callback(float_sample_rate,channels);
       for(int i=0;i<channels;i++){
-        _ringbuffer[_write_head%AUDIO_H_DEFAULT_RINGBUFFER_SIZE]=samples[i];
+        _ringbuffer[_write_head%_ringbuffer_size]=samples[i];
         _write_head++;
       }
     }
