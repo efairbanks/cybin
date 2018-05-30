@@ -8,6 +8,7 @@
 #include "libs/audio.h"
 #include "libs/audiofile.h"
 #include "libs/interpreter.h"
+#include "libs/frag.h"
 #include "libs/util.h"
 float* __process(float sr,int numOutChannels){
   return Interpreter::Process(sr,numOutChannels);
@@ -79,6 +80,51 @@ int cybin_loadaudiofile(lua_State* L){
   lua_pushstring(L,"samplerate");lua_pushnumber(L,file.sampleRate);lua_settable(L,-3);
   return 1;
 }
+int cybin_loadfragmentshader(lua_State* L){
+  const char* shader = lua_tostring(L,1);
+  Frag::LoadString((char*)shader);
+  return 0;
+}
+int cybin_loadfragmentshaderfile(lua_State* L){
+  const char* fileName = lua_tostring(L,1);
+  Frag::LoadFile((char*)fileName);
+  return 0;
+}
+int cybin_getuniformid(lua_State* L){
+  const char* uniform = lua_tostring(L,1);
+  lua_pushnumber(L,Frag::GetUniformID((char*)uniform));
+  return 1;
+}
+int cybin_setuniform1f(lua_State* L){
+  int uniformid = lua_tonumber(L,1);
+  double uniformvalue1 = lua_tonumber(L,2);
+  glUniform1f(uniformid,uniformvalue1);
+  return 0;
+}
+int cybin_setuniform2f(lua_State* L){
+  int uniformid = lua_tonumber(L,1);
+  double uniformvalue1 = lua_tonumber(L,2);
+  double uniformvalue2 = lua_tonumber(L,3);
+  glUniform2f(uniformid,uniformvalue1,uniformvalue2);
+  return 0;
+}
+int cybin_setuniform3f(lua_State* L){
+  int uniformid = lua_tonumber(L,1);
+  double uniformvalue1 = lua_tonumber(L,2);
+  double uniformvalue2 = lua_tonumber(L,3);
+  double uniformvalue3 = lua_tonumber(L,4);
+  glUniform3f(uniformid,uniformvalue1,uniformvalue2,uniformvalue3);
+  return 0;
+}
+int cybin_setuniform4f(lua_State* L){
+  int uniformid = lua_tonumber(L,1);
+  double uniformvalue1 = lua_tonumber(L,2);
+  double uniformvalue2 = lua_tonumber(L,3);
+  double uniformvalue3 = lua_tonumber(L,4);
+  double uniformvalue4 = lua_tonumber(L,5);
+  glUniform4f(uniformid,uniformvalue1,uniformvalue2,uniformvalue3,uniformvalue4);
+  return 0;
+}
 void* input_handler(void* data){
   SharedInput* input=(SharedInput*)data;
   // input handlng thread
@@ -95,6 +141,13 @@ int main(int argc, char** argv){
   Interpreter::Init();
   // --- Register cybin.loadaudiofile --- //
   Interpreter::LoadFunction("loadaudiofile",cybin_loadaudiofile);
+  Interpreter::LoadFunction("loadfragmentshader",cybin_loadfragmentshader);
+  Interpreter::LoadFunction("loadfragmentshaderfile",cybin_loadfragmentshader);
+  Interpreter::LoadFunction("getuniformid",cybin_getuniformid);
+  Interpreter::LoadFunction("setuniform1f",cybin_setuniform1f);
+  Interpreter::LoadFunction("setuniform2f",cybin_setuniform2f);
+  Interpreter::LoadFunction("setuniform3f",cybin_setuniform3f);
+  Interpreter::LoadFunction("setuniform4f",cybin_setuniform4f);
   // --- Configure environment --- //
   parse_args(argc,argv);
   if(Config.offline) {   // --- OFFLINE RENDERING ---- //
@@ -113,6 +166,7 @@ int main(int argc, char** argv){
   } else {        // --- REALTIME RENDERING --- //
     // --- Continue startup --- //
     Audio::Init(__process);
+    Frag::Init(argc,argv,NULL,NULL,NULL);
     // --- Handle REPL event loop --- //
     SharedInput Input;
     pthread_t input_handler_thread;
@@ -124,6 +178,7 @@ int main(int argc, char** argv){
         DEBUG("BUFFER CLEAN!");
       }
       Audio::EventLoop();
+      Frag::EventLoop();
       usleep(10000000/10000);
     }
     // --- Shutdown  --- //
