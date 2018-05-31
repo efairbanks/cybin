@@ -3,6 +3,7 @@
 //precision lowp float;
 uniform vec2 resolution;
 uniform float time;
+uniform float temp;
 
 vec3 look(vec3 o, vec3 t, vec2 p){
   vec3 ray = normalize(t-o);
@@ -36,7 +37,7 @@ float march(vec3 o, vec3 r){
 }
 void main(void) {
   vec2 p = (gl_FragCoord.xy / resolution.xy)-.5;
-  p*=10.;
+  p*=10.*temp;
   p.x*=resolution.x/resolution.y;
   vec3 camera=vec3(cos(time),0.2,sin(time))*1.5;
   vec3 ray=look(camera,vec3(0.),p);

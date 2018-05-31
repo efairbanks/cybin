@@ -1,0 +1,9 @@
+frag=[[
+uniform vec3 bgcolor;
+void main(){
+  gl_FragColor=vec4(bgcolor,1.);
+}
+]]
+cybin.loadfragmentshader(frag)
+bgcolor=cybin.getuniformid("bgcolor")
+cybin.setuniform3f(bgcolor,0.,1.,1.)

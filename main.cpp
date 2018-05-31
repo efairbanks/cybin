@@ -98,14 +98,14 @@ int cybin_getuniformid(lua_State* L){
 int cybin_setuniform1f(lua_State* L){
   int uniformid = lua_tonumber(L,1);
   double uniformvalue1 = lua_tonumber(L,2);
-  glUniform1f(uniformid,uniformvalue1);
+  if(uniformid>=0) glUniform1f(uniformid,uniformvalue1);
   return 0;
 }
 int cybin_setuniform2f(lua_State* L){
   int uniformid = lua_tonumber(L,1);
   double uniformvalue1 = lua_tonumber(L,2);
   double uniformvalue2 = lua_tonumber(L,3);
-  glUniform2f(uniformid,uniformvalue1,uniformvalue2);
+  if(uniformid>=0) glUniform2f(uniformid,uniformvalue1,uniformvalue2);
   return 0;
 }
 int cybin_setuniform3f(lua_State* L){
@@ -113,7 +113,7 @@ int cybin_setuniform3f(lua_State* L){
   double uniformvalue1 = lua_tonumber(L,2);
   double uniformvalue2 = lua_tonumber(L,3);
   double uniformvalue3 = lua_tonumber(L,4);
-  glUniform3f(uniformid,uniformvalue1,uniformvalue2,uniformvalue3);
+  if(uniformid>=0) glUniform3f(uniformid,uniformvalue1,uniformvalue2,uniformvalue3);
   return 0;
 }
 int cybin_setuniform4f(lua_State* L){
@@ -122,7 +122,7 @@ int cybin_setuniform4f(lua_State* L){
   double uniformvalue2 = lua_tonumber(L,3);
   double uniformvalue3 = lua_tonumber(L,4);
   double uniformvalue4 = lua_tonumber(L,5);
-  glUniform4f(uniformid,uniformvalue1,uniformvalue2,uniformvalue3,uniformvalue4);
+  if(uniformid>=0) glUniform4f(uniformid,uniformvalue1,uniformvalue2,uniformvalue3,uniformvalue4);
   return 0;
 }
 void* input_handler(void* data){
@@ -139,10 +139,11 @@ void* input_handler(void* data){
 int main(int argc, char** argv){
   // --- Start Lua --- //
   Interpreter::Init();
+  Frag::Init(argc,argv,NULL,NULL,NULL);
   // --- Register cybin.loadaudiofile --- //
   Interpreter::LoadFunction("loadaudiofile",cybin_loadaudiofile);
   Interpreter::LoadFunction("loadfragmentshader",cybin_loadfragmentshader);
-  Interpreter::LoadFunction("loadfragmentshaderfile",cybin_loadfragmentshader);
+  Interpreter::LoadFunction("loadfragmentshaderfile",cybin_loadfragmentshaderfile);
   Interpreter::LoadFunction("getuniformid",cybin_getuniformid);
   Interpreter::LoadFunction("setuniform1f",cybin_setuniform1f);
   Interpreter::LoadFunction("setuniform2f",cybin_setuniform2f);
@@ -166,7 +167,6 @@ int main(int argc, char** argv){
   } else {        // --- REALTIME RENDERING --- //
     // --- Continue startup --- //
     Audio::Init(__process);
-    Frag::Init(argc,argv,NULL,NULL,NULL);
     // --- Handle REPL event loop --- //
     SharedInput Input;
     pthread_t input_handler_thread;
