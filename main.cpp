@@ -182,7 +182,7 @@ int main(int argc, char** argv){
     Audio::Init(__process,Config.set_device);
     if(Config.list_devices) {
       Audio::ListDevices();
-      exit(0);
+      printf("cybin> "); // this is inelegant, we can do better.
     }
     // --- Handle REPL event loop --- //
     SharedInput Input;
