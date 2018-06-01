@@ -15,6 +15,8 @@ float* __process(float sr,int numOutChannels){
 }
 struct{
   bool offline;
+  bool list_devices;
+  int set_device;
   int duration;
   int samplerate;
   int channels;
@@ -26,6 +28,8 @@ typedef struct{
 } SharedInput;
 void parse_args(int argc, char** argv){
   Config.offline=false;
+  Config.list_devices=false;
+  Config.set_device=-1;
   Config.duration=10;
   Config.samplerate=44100;
   Config.channels=2;
@@ -49,6 +53,11 @@ void parse_args(int argc, char** argv){
     } else if(strcmp("--channels",currentArg)==0){
       i++;currentArg=argv[i];
       Config.channels=atoi(currentArg);
+    } else if(strcmp("--list-devices",currentArg)==0){
+      Config.list_devices=true;
+    } else if(strcmp("--set-device",currentArg)==0){
+      i++;currentArg=argv[i];
+      Config.set_device=atoi(currentArg);
     } else {
       Interpreter::LoadFile(currentArg);
     }
@@ -170,7 +179,11 @@ int main(int argc, char** argv){
     printf("\n%s Wrote audio to %s\n",CYBIN_PROMPT,Config.outfile);
   } else {        // --- REALTIME RENDERING --- //
     // --- Continue startup --- //
-    Audio::Init(__process);
+    Audio::Init(__process,Config.set_device);
+    if(Config.list_devices) {
+      Audio::ListDevices();
+      exit(0);
+    }
     // --- Handle REPL event loop --- //
     SharedInput Input;
     pthread_t input_handler_thread;

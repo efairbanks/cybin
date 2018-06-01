@@ -45,7 +45,7 @@ class Audio{
       frames_left -= frame_count;
     }
   }
-  static void Init(float* (*callback)(float,int)){
+  static void Init(float* (*callback)(float,int),int device_index){
     // --- LibSndIo Setup --- //  
     _ringbuffer_size=AUDIO_H_DEFAULT_RINGBUFFER_SIZE;
     _ringbuffer=(float*)malloc(_ringbuffer_size*sizeof(float));
@@ -57,7 +57,7 @@ class Audio{
     if(soundio_connect(_audio_soundio)) exit(1);
     soundio_flush_events(_audio_soundio);
     int default_out_device_index; if((default_out_device_index=soundio_default_output_device_index(_audio_soundio)<0)) exit(1);
-    if(!(_audio_device=soundio_get_output_device(_audio_soundio, default_out_device_index))) exit(1);
+    if(!(_audio_device=soundio_get_output_device(_audio_soundio,device_index<0?default_out_device_index:device_index))) exit(1);
     _audio_oustream = soundio_outstream_create(_audio_device);
     _audio_oustream->format = SoundIoFormatFloat32NE; _audio_oustream->write_callback = write_callback;
     if(soundio_outstream_open(_audio_oustream)||_audio_oustream->layout_error) exit(1);
@@ -83,6 +83,17 @@ class Audio{
       }
     }
     _audio_lock--;
+  }
+  static void ListDevices(){
+    int output_count = soundio_output_device_count(_audio_soundio);
+    fprintf(stderr, "\n\n-----Output Devices-----\n\n");
+    for (int i = 0; i < output_count; i += 1) {
+        struct SoundIoDevice *device = soundio_get_output_device(_audio_soundio, i);
+        const char *raw_str = device->is_raw ? " (raw)" : "";
+        fprintf(stderr, "%d: %s%s\n",i, device->name, raw_str);
+        soundio_device_unref(device);
+    }
+    printf("\n");
   }
 };
 float* Audio::_ringbuffer;
