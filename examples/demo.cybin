@@ -60,6 +60,7 @@ function play()
       s.speed=s.scoef or 1
    end
    while prcnt>1 do prcnt=prcnt-1 end
+   cybin.setuniform3f(bgcolor,0.,prcnt,0.)
    s.sindex=math.floor(prcnt*s.frames)
    local notes={40,39}
    local nindex=math.mod(math.floor(beat/32),2)+1
@@ -68,3 +69,21 @@ function play()
    end
    beat=beat+1
 end
+
+frag=[[
+uniform vec2 resolution;
+uniform vec3 bgcolor;
+void main(){
+  vec2 p=gl_FragCoord.xy/resolution.xy;
+  p=p*2.-1.;
+  p.x*=resolution.x/resolution.y;
+  float shade=0.;
+  float deg=(atan(p.y,p.x)/3.145+1.)/2.;
+  float mag=length(p);
+  if(length(p)<.8&&length(p)>0.3&&(1.-deg)<bgcolor.y) shade=1.0;
+  gl_FragColor=vec4(vec3(shade),1.0);
+}
+]]
+cybin.loadfragmentshader(frag)
+bgcolor=cybin.getuniformid("bgcolor")
+

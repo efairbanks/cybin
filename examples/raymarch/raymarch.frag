@@ -1,7 +1,6 @@
-// FRAGEMENT SHADER
 uniform vec2 resolution;
 uniform float time;
-uniform float temp;
+uniform float sphere_width;
 
 vec3 look(vec3 o, vec3 t, vec2 p){
   vec3 ray = normalize(t-o);
@@ -17,7 +16,7 @@ vec2 map(vec3 p){
     p=abs(p);
     p-=sin(p.y*1.1+p.x);
   }
-  return sphere(p,.4,0.);
+  return sphere(p,sphere_width,0.);
 }
 float march(vec3 o, vec3 r){
   float d=0.3;
@@ -35,20 +34,10 @@ float march(vec3 o, vec3 r){
 }
 void main(void) {
   vec2 p = (gl_FragCoord.xy / resolution.xy)-.5;
-  p*=10.*temp;
+  p*=10.;
   p.x*=resolution.x/resolution.y;
   vec3 camera=vec3(cos(time),0.2,sin(time))*1.5;
   vec3 ray=look(camera,vec3(0.),p);
   float a=clamp(0.5,0.0,1.0);
   gl_FragColor = vec4(vec3(march(camera,ray)), 1.0);
 }
-
-/*
-   uniform vec2 resolution;
-   uniform float time;
-   void main()
-   {
-// assign vertex color to pixel color
-gl_FragColor = vec4(gl_FragCoord.x/resolution.x,0, mod(time,1.0), 1.0);
-}
- */

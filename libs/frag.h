@@ -164,7 +164,7 @@ class Frag{
       free(f);
     }
     static int GetUniformID(char* name){
-      return _initialized?glGetUniformLocation(_program_id,name):-1;
+      return _initialized&&_program_id?glGetUniformLocation(_program_id,name):-1;
     }
     static void EventLoop(){if(_initialized)glutMainLoopEvent();}
 };

@@ -96,12 +96,14 @@ int cybin_getuniformid(lua_State* L){
   return 1;
 }
 int cybin_setuniform1f(lua_State* L){
+  if(lua_isnil(L,1)) return 0;
   int uniformid = lua_tonumber(L,1);
   double uniformvalue1 = lua_tonumber(L,2);
   if(uniformid>=0) glUniform1f(uniformid,uniformvalue1);
   return 0;
 }
 int cybin_setuniform2f(lua_State* L){
+  if(lua_isnil(L,1)) return 0;
   int uniformid = lua_tonumber(L,1);
   double uniformvalue1 = lua_tonumber(L,2);
   double uniformvalue2 = lua_tonumber(L,3);
@@ -109,6 +111,7 @@ int cybin_setuniform2f(lua_State* L){
   return 0;
 }
 int cybin_setuniform3f(lua_State* L){
+  if(lua_isnil(L,1)) return 0;
   int uniformid = lua_tonumber(L,1);
   double uniformvalue1 = lua_tonumber(L,2);
   double uniformvalue2 = lua_tonumber(L,3);
@@ -117,6 +120,7 @@ int cybin_setuniform3f(lua_State* L){
   return 0;
 }
 int cybin_setuniform4f(lua_State* L){
+  if(lua_isnil(L,1)) return 0;
   int uniformid = lua_tonumber(L,1);
   double uniformvalue1 = lua_tonumber(L,2);
   double uniformvalue2 = lua_tonumber(L,3);
