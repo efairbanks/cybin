@@ -6,7 +6,7 @@ This is Cybin. This is ~~early, unstable, _**alpha**_ software~~ actually relati
 
 ## Installation:
 * Make sure you've got a C++ compiler
-* Install [`LuaJIT`](https://github.com/LuaJIT/LuaJIT), [`libsoundio`](https://github.com/andrewrk/libsoundio), and [`libsndfile`](https://github.com/erikd/libsndfile)
+* Install [`LuaJIT`](https://github.com/LuaJIT/LuaJIT), [`libsoundio`](https://github.com/andrewrk/libsoundio), [`libsndfile`](https://github.com/erikd/libsndfile), [freeglut](http://freeglut.sourceforge.net/), and if you're on MacOS, [XQuartz](https://www.xquartz.org/) _(XQuarts has a native MacOS installer, all other dependencies are available through [brew](https://brew.sh/))_
 * Install [`git`](https://git-scm.com/)
 * Run `cd && git clone https://github.com/efairbanks/Cybin.git && cd Cybin`
 * Run `./debian_build.sh` or `macos_build.sh` depending on your platform
@@ -22,11 +22,9 @@ This is Cybin. This is ~~early, unstable, _**alpha**_ software~~ actually relati
 (add-to-list 'interpreter-mode-alist '("cybin" . cybin-mode))
 ```
 ### Emacs Hotkeys
-`C-c C-c` -> `execute line`
-
-`C-c C-b` -> `execute file`
-
-`C-c C-e` -> `execute block/paragraph`
+* `C-c C-c` -> `execute line`
+* `C-c C-b` -> `execute file`
+* `C-c C-e` -> `execute block/paragraph`
 
 **caveats:** _There's currently a pretty low limit to the number of characters you can send to the Cybin interpreter at a time, so watch out or it'll puke all over the place. Note the separation of code blocks in demo.cybin._
 
@@ -49,3 +47,5 @@ This is Cybin. This is ~~early, unstable, _**alpha**_ software~~ actually relati
 * [LuaJIT](https://github.com/LuaJIT/LuaJIT)
 * [libsoundio](https://github.com/andrewrk/libsoundio)
 * [libsndfile](https://github.com/erikd/libsndfile)
+* [freeglut](http://freeglut.sourceforge.net/)
+* [XQuartz](https://www.xquartz.org/) _(required for MacOS freeglut compatibility)_
