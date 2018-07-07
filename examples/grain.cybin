@@ -1,0 +1,12 @@
+require "cybin"
+s=cybin.loadaudiofile("AMEN.AIFF")
+x=Sampler.new(s)
+x.pitch=1
+x.speed=0.4
+x.grainsize=math.floor(x.sample.samplerate*0.01)
+o=SinOsc.new()
+o.freq=0.4
+function __process(sr)
+   x.pitch=o:Process(sr)*0.8+1
+   return x:Process(sr)
+end
