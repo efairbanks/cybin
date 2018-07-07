@@ -5,8 +5,14 @@ x.pitch=1
 x.speed=0.4
 x.grainsize=math.floor(x.sample.samplerate*0.01)
 o=SinOsc.new()
-o.freq=0.4
+o.freq=0.13
+o2=SinOsc.new()
+o2.freq=0.17
+o3=SinOsc.new()
+o3.freq=0.232
 function __process(sr)
    x.pitch=o:Process(sr)*0.8+1
+   x.speed=o2:Process(sr)*0.8+1
+   x.grainsize=math.floor(x.sample.samplerate*(o3:Process(sr)*0.1+0.1001))
    return x:Process(sr)
 end
