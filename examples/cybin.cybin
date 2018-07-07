@@ -268,7 +268,7 @@ function Metro:Process(sr)
    local now=self.time
    for i=1,#self.events do
       if self.time>self.events[i].start then
-	 self.events[i].func()
+	 self.events[i].func(self.time)
 	 table.insert(rmindices,i)
       end
    end
