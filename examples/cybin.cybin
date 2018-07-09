@@ -281,3 +281,55 @@ end
 function Metro:Event(start,func)
    table.insert(self.events,{start=start,func=func})
 end
+----------------------
+----------------------
+Sampler={}
+Sampler.__index=Sampler
+function Sampler.new(s)
+   local smeta={}
+   smeta.__index=function(self,i)
+      index=tonumber(i)
+      if i then
+	 while i>self.frames do i=i-self.frames end
+	 while i<self.frames do i=i+self.frames end
+	 return self[math.floor(i)]
+      else
+	 return nil
+      end
+   end
+   local o={}
+   setmetatable(o,Sampler)
+   o.sample=s
+   setmetatable(o.sample,smeta)
+   o.grainsize=s.samplerate*30/1000
+   o.grain1start=0
+   o.grain1sindex=0
+   o.grain2start=0
+   o.grain2sindex=0
+   o.grainwindex=0
+   o.sindex=0
+   o.speed=1
+   o.pitch=1
+   return o
+end
+function Sampler:Process(sr)
+   if self.grainwindex >= self.grainsize then
+      self.grainwindex=0
+      self.grain1sindex=0
+      self.grain1start=self.grain2start+self.grain2sindex
+      self.grain2sindex=0
+      self.grain2start=self.sindex
+   end
+   local out={}
+   for i=1,self.sample.channels do
+      local window1=math.cos(math.pi*0.5*self.grainwindex/self.grainsize)
+      local window2=math.sin(math.pi*0.5*self.grainwindex/self.grainsize)
+      out[i]=self.sample[(self.grain1sindex+self.grain1start)*self.sample.channels+i]*window1
+      out[i]=self.sample[(self.grain2sindex+self.grain2start)*self.sample.channels+i]*window2+out[i]
+   end
+   self.grain1sindex=self.grain1sindex+1*self.pitch
+   self.grain2sindex=self.grain2sindex+1*self.pitch
+   self.grainwindex=self.grainwindex+1
+   self.sindex=self.sindex+1*self.speed
+   return unpack(out)
+end
