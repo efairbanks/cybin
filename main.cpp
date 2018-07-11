@@ -17,7 +17,7 @@ struct{
   bool offline;
   bool list_devices;
   int set_device;
-  int duration;
+  float duration;
   int samplerate;
   int channels;
   char* outfile;
@@ -46,7 +46,7 @@ void parse_args(int argc, char** argv){
       }
     } else if(strcmp("--duration",currentArg)==0){
       i++;currentArg=argv[i];
-      Config.duration=atoi(currentArg);
+      Config.duration=atof(currentArg);
     } else if(strcmp("--samplerate",currentArg)==0){
       i++;currentArg=argv[i];
       Config.samplerate=atoi(currentArg);
@@ -165,8 +165,8 @@ int main(int argc, char** argv){
   // --- Configure environment --- //
   parse_args(argc,argv);
   if(Config.offline) {   // --- OFFLINE RENDERING ---- //
-    printf("Rendering %d seconds of %d-channel audio to %s at %dHz",Config.duration,Config.channels,Config.outfile,Config.samplerate);
-    int frames=Config.duration*Config.samplerate;
+    printf("Rendering %f seconds of %d-channel audio to %s at %dHz",Config.duration,Config.channels,Config.outfile,Config.samplerate);
+    int frames=int(Config.duration*Config.samplerate);
     float* buffer = (float*)malloc(frames*Config.channels*sizeof(float));
     int progress=-1;
     for(int i=0;i<frames;i++) {
@@ -174,7 +174,7 @@ int main(int argc, char** argv){
       float* samples=Interpreter::Process(Config.samplerate,Config.channels);
       for(int j=0;j<Config.channels;j++) buffer[i*Config.channels+j]=samples[j];
     }
-    AudioFile file(buffer,Config.duration*Config.samplerate,Config.channels,Config.samplerate);
+    AudioFile file(buffer,int(Config.duration*Config.samplerate),Config.channels,Config.samplerate);
     file.Write(Config.outfile);
     printf("\n%s Wrote audio to %s\n",CYBIN_PROMPT,Config.outfile);
   } else {        // --- REALTIME RENDERING --- //
