@@ -1,0 +1,45 @@
+require 'cybin'
+require 'seq'
+function table.toEvents(t,callback)
+   local o={}
+   local close=function(val,func)
+      local v=val
+      local f=func
+      return function()
+	 return func(val)
+      end
+   end
+   for i=1,#t do
+      o[i]={start=(i-1)/#t,func=close(t[i],callback)}
+   end
+   return o
+end
+
+m=Metro.new()
+s=Synth.new()
+s2=Synth.new()
+
+function play(time)
+   if offsetsIndex==nil then offsetsIndex=1 end
+   local offsets={{5,7},{2,5,7},{0,10},{10,7},{7,0,5,7,0}}
+   m:Events(table.toEvents(Seq.new(offsets[math.floor(offsetsIndex/4)%#offsets+1]),function(n) offset=n; return 0 end))
+   m:Events(table.toEvents(Seq.new({7,0,3,0,5,0,10,0}),function(n) globnote=n+60+offset; s:PlayNote(globnote) end))
+   if(offsetsIndex%4==0) then s2:PlayNote(offsets[math.floor(offsetsIndex/4)%#offsets+1][1]%12+36) end
+   offsetsIndex=offsetsIndex+1
+   return 1
+end
+
+m:Interval("play")
+
+function __process(sr)
+   m:Process(sr)
+   local out=s:Process(sr)*0.2
+   out=out+s2:Process(sr)*0.7
+   out=math.atan(out*3.5)
+   return out,out
+end
+
+for i=1,#s.voices do s.voices[i].release.duration=4 end
+for i=1,#s.voices do s.voices[i].attack.duration=0.2 end
+for i=1,#s2.voices do s2.voices[i].release.duration=16 end
+for i=1,#s2.voices do s2.voices[i].attack.duration=0.2 end

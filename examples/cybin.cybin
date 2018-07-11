@@ -5,11 +5,14 @@ Utils.scale=function(x,a,b,na,nb)
 end
 ----------------------
 ----------------------
-SinOsc={phase=0,freq=440,amp=1}
+SinOsc={}
 SinOsc.__index=SinOsc
 function SinOsc.new()
   local o={}
   setmetatable(o,SinOsc)
+  o.phase=0
+  o.freq=440
+  o.amp=1
   return o
 end
 function SinOsc:Process(samplerate)
@@ -18,11 +21,15 @@ function SinOsc:Process(samplerate)
 end
 ----------------------
 ----------------------
-PulseOsc={phase=0,freq=440,amp=1,width=0.5}
+PulseOsc={}
 PulseOsc.__index=PulseOsc
 function PulseOsc.new()
   local o={}
   setmetatable(o,PulseOsc)
+  o.phase=0
+  o.freq=440
+  o.amp=1
+  o.width=0.5
   return o
 end
 function PulseOsc:Process(samplerate)
@@ -32,11 +39,14 @@ function PulseOsc:Process(samplerate)
 end
 ----------------------
 ----------------------
-SawOsc={phase=0,freq=440,amp=1,width=0.5}
+SawOsc={}
 SawOsc.__index=SawOsc
 function SawOsc.new()
   local o={}
   setmetatable(o,SawOsc)
+  o.phase=0
+  o.freq=440
+  o.amp=1
   return o
 end
 function SawOsc:Process(samplerate)
@@ -46,25 +56,33 @@ function SawOsc:Process(samplerate)
 end
 ----------------------
 ----------------------
-TriOsc={phase=0,freq=440,amp=1,width=0.5}
+TriOsc={}
 TriOsc.__index=TriOsc
 function TriOsc.new()
   local o={}
   setmetatable(o,TriOsc)
+  o.phase=0
+  o.freq=440
+  o.amp=1
   return o
 end
 function TriOsc:Process(samplerate)
   self.phase=self.phase+self.freq/samplerate
   while self.phase>1 do self.phase=self.phase-1 end
+  print(self.phase)
   return (math.abs(self.phase-0.5)*4-1)*self.amp
 end
 ----------------------
 ----------------------
-Line={from=1,to=0,duration=1,delta=-1}
+Line={}
 Line.__index = Line
 function Line.new()
   local o={}
   setmetatable(o,Line)
+  o.from=1
+  o.to=0
+  o.duration=1
+  o.delta=-1
   return o
 end
 function Line:Process(samplerate)
@@ -83,11 +101,22 @@ function Line:Reset()
 end
 ----------------------
 ----------------------
-Filter={filterType="lowpass",a0=1,a1=0,a2=0,b1=0,b2=0,Fc=0.25,Q=0.7,peakGain=0,z1=0,z2=0}
+Filter={}
 Filter.__index=Filter
 function Filter.new(filterType)
   local o={}
   setmetatable(o,Filter)
+  filterType="lowpass"
+  o.a0=1
+  o.a1=0
+  o.a2=0
+  o.b1=0
+  o.b2=0
+  o.Fc=0.25
+  o.Q=0.7
+  o.peakGain=0
+  o.z1=0
+  o.z2=0
   o.filterType=filterType
   o:SetType(o.filterType)
   return o
@@ -244,8 +273,7 @@ function Synth.new()
 end
 function Synth:PlayNote(note)
   self.voices[self.voiceIndex]:PlayNote(note)
-  self.voiceIndex=(self.voiceIndex+1)%self.numVoices
-  self.voiceIndex=self.voiceIndex+1
+  self.voiceIndex=(self.voiceIndex+1)%self.numVoices+1
 end
 function Synth:Process(sr)
   local output=0
@@ -256,11 +284,13 @@ function Synth:Process(sr)
 end
 ----------------------
 ----------------------
-Metro={events={},time=0}
+Metro={}
 Metro.__index=Metro
 function Metro.new()
    local o={}
    setmetatable(o,Metro)
+   o.events={}
+   o.time=0
    return o
 end
 function Metro:Process(sr)
@@ -280,6 +310,28 @@ function Metro:Process(sr)
 end
 function Metro:Event(start,func)
    table.insert(self.events,{start=start,func=func})
+end
+function Metro:Events(e)
+   for i=1,#e do
+      table.insert(self.events,{start=e[i].start+self.time,func=e[i].func})
+   end
+end
+function Metro:Interval(func)
+   local callback=nil
+   if type(func)=='function' then
+      callback=function(time)
+	 local nextTime=self.time+func(self.time)
+	 --print(nextTime-self.time)
+	 self:Event(nextTime,callback)
+      end
+   elseif type(func)=='string' and _G[func]~=nil then
+      callback=function(time)
+	 local nextTime=self.time+_G[func](self.time)
+	 --print(nextTime-self.time)
+	 self:Event(nextTime,callback)
+      end
+   end
+   if callback~=nil then callback() end
 end
 ----------------------
 ----------------------
