@@ -16,3 +16,4 @@ function __process(sr)
    x.grainsize=math.floor(x.sample.samplerate*(o3:Process(sr)*0.1+0.1001))
    return x:Process(sr)
 end
+
