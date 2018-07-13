@@ -1,0 +1,118 @@
+require 'cybin'
+require 'seq'
+
+Pat={}
+Pat.__index=Pat
+function Pat.new(t)
+   local o={}
+   setmetatable(o,Pat)
+   o.t={}
+   for i=1,#t do o.t[i]=t[i] end
+   o.cycles=1
+   o.offset=0
+   return o
+end
+
+function round(x) if math.fmod(x,1)>=0.5 then return math.ceil(x) else return math.floor(x) end end
+
+function Pat:queryEvents(a,b)
+   if a>b then local temp=b; b=a; a=temp; end
+   local out={}
+   local span=b-a
+   local stepSize=self.cycles/#self.t
+   if stepSize>span then stepSize=span end
+   local nSteps=(span*#self.t)/self.cycles
+   local tIndex=0
+   local tIndexOffset=(a*#self.t)/self.cycles
+   while tIndex<nSteps do
+      local eventStart=tIndex*stepSize+a+self.offset
+      local eventValue=self.t[round(tIndexOffset+tIndex)%#self.t+1]
+      if type(eventValue)=='table' then
+	 eventValue=eventValue:queryEvents(eventStart,eventStart+stepSize)
+	 for i=1,#eventValue do table.insert(out,eventValue[i]) end
+      elseif type(eventValue)=='function' then
+	 eventValue=eventValue(eventStart)
+	 table.insert(out,{start=eventStart,value=eventValue})
+      else
+	 table.insert(out,{start=eventStart,value=eventValue})
+      end
+      tIndex=tIndex+1
+   end
+   return out
+end
+
+function Pat:slow(c)
+   self.cycles=c
+   return self
+end
+
+function Pat:__tostring()
+   local function tprint(t)
+      local out='['
+      for i=1,#t do
+	 local separator=' '
+	 if i==1 then separator='' end
+	 out=out..separator..tostring(t[i])
+      end
+      return out..']'
+   end
+   return tprint(self.t)
+end
+
+function table.printr(t)
+   local function tprint(t)
+      local i=1
+      local out='{'
+      for k,v in pairs(t) do
+	 local separator=', '
+	 if i==1 then separator='' end
+	 local element=v
+	 if type(element)=='table' then
+	    element=tprint(element)
+	 else
+	    element=k..':'..tostring(element)
+	 end
+	 out=out..separator..element
+	 i=i+1
+      end
+      return out..'}'
+   end
+   print(tprint(t))
+end
+function table.map(t,f)
+   local o={}
+   for i=1,#t do table.insert(o,f(t[i])) end
+   return o
+end
+
+function close(val,func)
+   return function()
+      return func(val)
+   end
+end
+function e2f(e)
+   return {start=e.start,func=close(e.value,function(x) s:PlayNote(60+x) end)}
+end
+
+m=Metro.new()
+s=Synth.new()
+
+function play(time)
+   p=Pat.new({Pat.new({7}),Pat.new({5})}):slow(1.5)
+   m:Events(table.map(p:queryEvents(math.ceil(time),math.ceil(time+0.125)),e2f))
+   return 0.125
+end
+
+function trec(time)
+   print(time);
+   if play~=nil then
+      m:Event(m.time+play(time),trec)
+   end
+end
+m:Event(math.ceil(m.time),trec)
+
+function __process(sr)
+   m:Process(sr)
+   return s:Process(sr)
+end
+

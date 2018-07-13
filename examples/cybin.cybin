@@ -313,7 +313,7 @@ function Metro:Event(start,func)
 end
 function Metro:Events(e)
    for i=1,#e do
-      table.insert(self.events,{start=e[i].start+self.time,func=e[i].func})
+      table.insert(self.events,{start=e[i].start,func=e[i].func})
    end
 end
 function Metro:Interval(func)
