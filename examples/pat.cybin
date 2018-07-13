@@ -19,14 +19,14 @@ function Pat:queryEvents(a,b,c)
    a=a*c;b=b*c
    local out={}
    local span=b-a
-   local time=a
    local step=1/#self.t
    local i=0
-   local eventOffset=math.floor(a/step)
+   local eventOffset=math.ceil(a/step)
+   local time=eventOffset*step
    while time<b do
       local e=self.t[((i+eventOffset)%#self.t)+1]
-      local start=a+i/#self.t
-      local stop=a+(i+1)/#self.t
+      local start=time
+      local stop=time+step
       if type(e)=='table' then
 	 local events=e:queryEvents(start,stop,1/step)
 	 for i=1,#events do table.insert(out,events[i]) end
@@ -36,19 +36,16 @@ function Pat:queryEvents(a,b,c)
       i=i+1
       time=time+step
    end
-   local oldOut=out
-   out={}
-   for i=1,#oldOut do
-      if oldOut[i].start>=a and oldOut[i].start<b then
-	 out[i]={start=oldOut[i].start/c,stop=oldOut[i].stop/c,value=oldOut[i].value}
-      end
+   for i=1,#out do
+      out[i].start=out[i].start/c
+      out[i].stop=out[i].stop/c
    end
    return out
 end
 
 --[[
 p=Pat.new({0,1,2,3})
-e=p:queryEvents(0,0.125,0.5)
+e=p:queryEvents(0.0,0.1,1)
 table.printr(e)
 --]]
 
@@ -88,6 +85,7 @@ function table.printr(t)
 end
 function table.map(t,f)
    local o={}
+   if #t==0 then return o end
    for i=1,#t do table.insert(o,f(t[i])) end
    return o
 end
@@ -113,8 +111,8 @@ function table.wrap(t,i)
    return t[(i-1)%#t+1]
 end
 function play(time)
-   local interval=4
-   p=Pat.new({0,3,7,Pat.new({0,3,7,12})})
+   local interval=0.001
+   p=Pat.new({0,3,7,Pat.new({1,2,3,4})})
    local events=p:queryEvents(time,time+interval,1)
    events=table.map(events,function(x) return {start=x.start,value=x.value} end)
    events=table.map(events,e2f)
