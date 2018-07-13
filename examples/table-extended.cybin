@@ -1,0 +1,30 @@
+function table.printr(t)
+   local function tprint(t)
+      local i=1
+      local out='{'
+      for k,v in pairs(t) do
+	 local separator=', '
+	 if i==1 then separator='' end
+	 local element=v
+	 if type(element)=='table' then
+	    element=tprint(element)
+	 else
+	    element=k..':'..tostring(element)
+	 end
+	 out=out..separator..element
+	 i=i+1
+      end
+      return out..'}'
+   end
+   print(tprint(t))
+end
+function table.map(t,f)
+   local o={}
+   if #t==0 then return o end
+   for i=1,#t do table.insert(o,f(t[i])) end
+   return o
+end
+function table.wrap(t,i)
+   while i<#t do i=i+#t end
+   return t[(i-1)%#t+1]
+end

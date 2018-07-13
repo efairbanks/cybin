@@ -1,21 +1,16 @@
-require 'cybin'
-require 'seq'
-
 Pat={}
 Pat.__index=Pat
 function Pat.new(t)
    local o={}
    setmetatable(o,Pat)
    o.t={}
+   o.cycles=1
    for i=1,#t do o.t[i]=t[i] end
    return o
 end
-
-function round(x) if math.fmod(x,1)>=0.5 then
-      return math.ceil(x) else return math.floor(x)
-end end
 function Pat:queryEvents(a,b,c)
    if a>b then local temp=b; b=a; a=temp; end
+   c=c/self.cycles
    a=a*c;b=b*c
    local out={}
    local span=b-a
@@ -28,7 +23,9 @@ function Pat:queryEvents(a,b,c)
       local start=time
       local stop=time+step
       if type(e)=='table' then
-	 local events=e:queryEvents(start,stop,1/step)
+	 local epsilon=0.000000001 --ensure we don't accidentally get the beginning of the next pat
+	 -- ...due to rounding errors
+	 local events=e:queryEvents(start,stop,1/step-epsilon)
 	 for i=1,#events do table.insert(out,events[i]) end
       else
 	 table.insert(out,{start=start,stop=stop,value=e})
@@ -42,14 +39,10 @@ function Pat:queryEvents(a,b,c)
    end
    return out
 end
-
---[[
-p=Pat.new({0,1,2,3})
-e=p:queryEvents(0.0,0.1,1)
-table.printr(e)
---]]
-
-
+function Pat:slow(x)
+   self.cycles=x
+   return self
+end
 function Pat:__tostring()
    local function tprint(t)
       local out='['
@@ -61,74 +54,5 @@ function Pat:__tostring()
       return out..']'
    end
    return tprint(self.t)
-end
-
-function table.printr(t)
-   local function tprint(t)
-      local i=1
-      local out='{'
-      for k,v in pairs(t) do
-	 local separator=', '
-	 if i==1 then separator='' end
-	 local element=v
-	 if type(element)=='table' then
-	    element=tprint(element)
-	 else
-	    element=k..':'..tostring(element)
-	 end
-	 out=out..separator..element
-	 i=i+1
-      end
-      return out..'}'
-   end
-   print(tprint(t))
-end
-function table.map(t,f)
-   local o={}
-   if #t==0 then return o end
-   for i=1,#t do table.insert(o,f(t[i])) end
-   return o
-end
-
-function close(val,func)
-   return function()
-      return func(val)
-   end
-end
-function e2f(e)
-   local function pn(x)
-      --print(x)
-      s:PlayNote(60+x)
-   end
-   return {start=e.start,func=close(e.value,pn)}
-end
-
-m=Metro.new()
-s=Synth.new()
-
-function table.wrap(t,i)
-   while i<#t do i=i+#t end
-   return t[(i-1)%#t+1]
-end
-function play(time)
-   local interval=0.001
-   p=Pat.new({0,3,7,Pat.new({1,2,3,4})})
-   local events=p:queryEvents(time,time+interval,1)
-   events=table.map(events,function(x) return {start=x.start,value=x.value} end)
-   events=table.map(events,e2f)
-   m:Events(events)
-   return interval
-end
-function trec(time)
-   if play~=nil then
-      m:Event(m.time+play(time),trec)
-   end
-end
-
-m:Event(math.ceil(m.time),trec)
-
-function __process(sr)
-   m:Process(sr)
-   return s:Process(sr)
 end
 

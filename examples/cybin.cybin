@@ -303,7 +303,8 @@ function Metro:Process(sr)
       end
    end
    for i=1,#rmindices do
-      table.remove(self.events,rmindices[i])
+      print(i)
+      table.remove(self.events,rmindices[#rmindices-i+1])
    end
    self.time=self.time+1/sr
    return now

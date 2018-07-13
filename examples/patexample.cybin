@@ -1,0 +1,43 @@
+require 'cybin'
+require 'pat'
+require 'table-extended'
+
+function close(val,func)
+   return function()
+      return func(val)
+   end
+end
+function e2f(e)
+   local function pn(x)
+      --print(x)
+      s:PlayNote(60+x)
+   end
+   return {start=e.start,func=close(e.value,pn)}
+end
+
+m=Metro.new()
+s=Synth.new()
+
+temp=0
+function play(time)
+   local interval=0.2
+   local p=Pat.new({0,3,7,Pat.new({1,2,3}):slow(0.5)}):slow(2)
+   local events=p:queryEvents(time,time+interval,1)
+   events=table.map(events,function(x) return {start=x.start,value=x.value} end)
+   events=table.map(events,e2f)
+   m:Events(events)
+   return interval
+end
+function trec(time)
+   if play~=nil then
+      m:Event(m.time+play(time),trec)
+   end
+end
+
+m:Event(math.ceil(m.time),trec)
+
+function __process(sr)
+   m:Process(sr)
+   return s:Process(sr)
+end
+
