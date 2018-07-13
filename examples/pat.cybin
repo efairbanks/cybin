@@ -17,13 +17,15 @@ function round(x) if math.fmod(x,1)>=0.5 then return math.ceil(x) else return ma
 
 function Pat:queryEvents(a,b)
    if a>b then local temp=b; b=a; a=temp; end
+   a=a/self.cycles
+   b=b/self.cycles
    local out={}
    local span=b-a
-   local stepSize=self.cycles/#self.t
+   local stepSize=1/#self.t
    if stepSize>span then stepSize=span end
-   local nSteps=(span*#self.t)/self.cycles
+   local nSteps=(span*#self.t)
    local tIndex=0
-   local tIndexOffset=(a*#self.t)/self.cycles
+   local tIndexOffset=(a*#self.t)
    while tIndex<nSteps do
       local eventStart=tIndex*stepSize+a+self.offset
       local eventValue=self.t[round(tIndexOffset+tIndex)%#self.t+1]
@@ -38,6 +40,7 @@ function Pat:queryEvents(a,b)
       end
       tIndex=tIndex+1
    end
+   for i=1,#out do out[i].start=out[i].start*self.cycles end
    return out
 end
 
@@ -97,18 +100,26 @@ end
 m=Metro.new()
 s=Synth.new()
 
-function play(time)
-   p=Pat.new({Pat.new({7}),Pat.new({5})}):slow(1.5)
-   m:Events(table.map(p:queryEvents(math.ceil(time),math.ceil(time+0.125)),e2f))
-   return 0.125
+function table.wrap(t,i)
+   while i<#t do i=i+#t end
+   return t[(i-1)%#t+1]
 end
-
+function play(time)
+   local interval=1/4
+   p=Pat.new({Pat.new({1,3,5,7}):slow(1/100),Pat.new({0,2,3,4}):slow(1/100)}):slow(5)
+   local events=p:queryEvents(math.ceil(time),math.ceil(time+interval))
+   events=table.map(events,function(x) return {start=x.start,value=table.wrap({0,2,3,5,7,8,10},x.value)} end)
+   events=table.map(events,e2f)
+   m:Events(events)
+   return interval
+end
 function trec(time)
    print(time);
    if play~=nil then
       m:Event(m.time+play(time),trec)
    end
 end
+
 m:Event(math.ceil(m.time),trec)
 
 function __process(sr)
