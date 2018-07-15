@@ -1,5 +1,4 @@
 require 'cybin'
-require 'pat'
 require 'table-extended'
 
 function close(val,func)
@@ -7,25 +6,44 @@ function close(val,func)
       return func(val)
    end
 end
+
 function e2f(e)
    local function pn(x)
-      --print(x)
-      s:PlayNote(60+x)
+      if x~='~' then s:PlayNote(36+x) end
    end
    return {start=e.start,func=close(e.value,pn)}
 end
 
 m=Metro.new()
 s=Synth.new()
+sample=cybin.loadaudiofile('AMEN.AIFF')
+granny=Sampler.new(sample)
+granny.loop=true
+granny.speed=0.7/1
+granny.grainsize=44100/30
 
-temp=0
 function play(time)
    local interval=0.2
-   local p=Pat.new({0,3,7,Pat.new({1,2,3}):slow(0.5)}):slow(2)
+   -- granny events --
+   local function playGranny(value)
+      local v=value
+      local function out(time)
+	 granny.sindex=granny.sample.frames*v
+	 print(v)
+      end
+      return out
+   end
+   local p=Pat.new({0,1/8,2/8,3/8,4/8,5/8,6/8,7/8}):mapValues(playGranny):slow(4)
    local events=p:queryEvents(time,time+interval,1)
-   events=table.map(events,function(x) return {start=x.start,value=x.value} end)
-   events=table.map(events,e2f)
+   for i=1,#events do events[i].func=events[i].value end
    m:Events(events)
+   -- end granny events --
+   -- synth events --
+   p=Pat.new({0,'~','~',0}):slow(2)
+   events=p:queryEvents(time,time+interval,1)
+   events=table.map(events,e2f)
+   --m:Events(events)
+   -- end synth events --
    return interval
 end
 function trec(time)
@@ -38,6 +56,9 @@ m:Event(math.ceil(m.time),trec)
 
 function __process(sr)
    m:Process(sr)
-   return s:Process(sr)
+   local out=s:Process(sr)*8
+   out=out+granny:Process(sr)
+   --out=math.atan(out*10)
+   return out,out
 end
 

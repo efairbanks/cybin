@@ -69,7 +69,6 @@ end
 function TriOsc:Process(samplerate)
   self.phase=self.phase+self.freq/samplerate
   while self.phase>1 do self.phase=self.phase-1 end
-  print(self.phase)
   return (math.abs(self.phase-0.5)*4-1)*self.amp
 end
 ----------------------
@@ -290,6 +289,7 @@ function Metro.new()
    local o={}
    setmetatable(o,Metro)
    o.events={}
+   o.pats={}
    o.time=0
    return o
 end
@@ -303,18 +303,29 @@ function Metro:Process(sr)
       end
    end
    for i=1,#rmindices do
-      print(i)
       table.remove(self.events,rmindices[#rmindices-i+1])
    end
    self.time=self.time+1/sr
    return now
+end
+function Metro:Pat(pat,handler,interval)
+   local function close(value)
+      return function(time)
+	 handler(value,time)
+      end
+   end
+   local events=pat:queryEvents(self.time,self.time+interval,1)
+   for i=1,#events do
+      events[i].func=close(events[i].value)
+   end
+   self:Events(events)
 end
 function Metro:Event(start,func)
    table.insert(self.events,{start=start,func=func})
 end
 function Metro:Events(e)
    for i=1,#e do
-      table.insert(self.events,{start=e[i].start,func=e[i].func})
+      table.insert(self.events,e[i])
    end
 end
 function Metro:Interval(func)
@@ -322,14 +333,14 @@ function Metro:Interval(func)
    if type(func)=='function' then
       callback=function(time)
 	 local nextTime=self.time+func(self.time)
-	 --print(nextTime-self.time)
 	 self:Event(nextTime,callback)
       end
    elseif type(func)=='string' and _G[func]~=nil then
       callback=function(time)
-	 local nextTime=self.time+_G[func](self.time)
-	 --print(nextTime-self.time)
-	 self:Event(nextTime,callback)
+	 if _G[func]~=nil then
+	    local nextTime=self.time+_G[func](self.time)
+	    self:Event(nextTime,callback)
+	 end
       end
    end
    if callback~=nil then callback() end
@@ -338,17 +349,6 @@ end
 ----------------------
 Sampler={}
 Sampler.__index=Sampler
-function Sampler.getChannels(self,i)
-   while i>self.sample.frames do i=i-self.sample.frames end
-   while i<1 do i=i+self.sample.frames end
-   if i==0 then i=1 end
-   local out={}
-   for j=1,self.sample.channels do
-      out[j]=self.sample[math.floor(i-1)*self.sample.channels+j]
-      if out[j]==nil then out[j]=0 end
-   end
-   return out
-end 
 function Sampler.new(s)
    local o={}
    setmetatable(o,Sampler)
@@ -363,9 +363,15 @@ function Sampler.new(s)
    o.sindex=1
    o.speed=1
    o.pitch=1
+   o.loop=true
    return o
 end
 function Sampler:Process(sr)
+   if self.loop==false and self.sindex>self.sample.frames then
+      local out={}
+      for i=1,self.sample.channels do out[i]=0 end
+      return unpack(out)
+   end
    if self.grainwindex >= self.grainsize then
       self.grainwindex=0
       self.grain1sindex=0
@@ -387,6 +393,17 @@ function Sampler:Process(sr)
    self.sindex=self.sindex+1*self.speed
    return unpack(out)
 end
+function Sampler.getChannels(self,i)
+   while i>self.sample.frames do i=i-self.sample.frames end
+   while i<1 do i=i+self.sample.frames end
+   if i==0 then i=1 end
+   local out={}
+   for j=1,self.sample.channels do
+      out[j]=self.sample[math.floor(i-1)*self.sample.channels+j]
+      if out[j]==nil then out[j]=0 end
+   end
+   return out
+end 
 ----------------------
 ----------------------
 Env={}
@@ -425,4 +442,73 @@ function Env:Process(sr)
    end
    return self.out
 end
-
+----------------------
+----------------------
+Pat={}
+Pat.__index=Pat
+function Pat.new(t)
+   local o={}
+   setmetatable(o,Pat)
+   o.t={}
+   o.cycles=1
+   for i=1,#t do o.t[i]=t[i] end
+   return o
+end
+function Pat:queryEvents(a,b,c)
+   if a>b then local temp=b; b=a; a=temp; end
+   c=c/self.cycles
+   a=a*c;b=b*c
+   local out={}
+   local span=b-a
+   local step=1/#self.t
+   local i=0
+   local eventOffset=math.ceil(a/step)
+   local time=eventOffset*step
+   while time<b do
+      local e=self.t[((i+eventOffset)%#self.t)+1]
+      local start=time
+      local stop=time+step
+      if type(e)=='table' then
+	 local epsilon=0.000000001 --ensure we don't accidentally get the beginning of the next pat
+	 -- ...due to rounding errors
+	 local events=e:queryEvents(start,stop,1/step-epsilon)
+	 for i=1,#events do table.insert(out,events[i]) end
+      else
+	 table.insert(out,{start=start,stop=stop,value=e})
+      end
+      i=i+1
+      time=time+step
+   end
+   for i=1,#out do
+      out[i].start=out[i].start/c
+      out[i].stop=out[i].stop/c
+   end
+   return out
+end
+function Pat:slow(x)
+   self.cycles=x
+   return self
+end
+function Pat:mapValues(f)
+   for i=1,#self.t do
+      local value=self.t[i]
+      if type(value)=='table' then
+	 self.t[i]=value:mapValues(f)
+      else
+	 self.t[i]=f(value)
+      end
+   end
+   return self
+end
+function Pat:__tostring()
+   local function tprint(t)
+      local out='['
+      for i=1,#t do
+	 local separator=' '
+	 if i==1 then separator='' end
+	 out=out..separator..tostring(t[i])
+      end
+      return out..']'
+   end
+   return tprint(self.t)
+end
