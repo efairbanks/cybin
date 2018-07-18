@@ -377,9 +377,9 @@ function Sampler.new(s)
    return o
 end
 function Sampler:Process(sr)
+   local out={}
+   for i=1,self.sample.channels do out[i]=0 end
    if self.loop==false and self.sindex>self.sample.frames then
-      local out={}
-      for i=1,self.sample.channels do out[i]=0 end
       return unpack(out)
    end
    if self.grainwindex >= self.grainsize then
@@ -389,7 +389,6 @@ function Sampler:Process(sr)
       self.grain2sindex=0
       self.grain2start=self.sindex
    end
-   local out={}
    local grain1channels=self:getChannels(self.grain1sindex+self.grain1start)
    local grain2channels=self:getChannels(self.grain2sindex+self.grain2start)
    local nofx=self:getChannels(self.sindex)
@@ -596,6 +595,7 @@ function PolySampler:Play(p)
 end
 function PolySampler:Process(sr)
    local out={}
+   for i=1,self.sample.channels do out[i]=0 end
    for i=#self.voices,1,-1 do
       if self.voices[i].env.delta<0 then table.remove(self.voices,i) end
    end
