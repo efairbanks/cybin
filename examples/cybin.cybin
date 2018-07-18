@@ -7,6 +7,7 @@ end
 ----------------------
 SinOsc={}
 SinOsc.__index=SinOsc
+setmetatable(SinOsc, {__call = function (cls, ...) return cls.new(...) end,})
 function SinOsc.new()
   local o={}
   setmetatable(o,SinOsc)
@@ -23,6 +24,7 @@ end
 ----------------------
 PulseOsc={}
 PulseOsc.__index=PulseOsc
+setmetatable(PulseOsc, {__call = function (cls, ...) return cls.new(...) end,})
 function PulseOsc.new()
   local o={}
   setmetatable(o,PulseOsc)
@@ -41,6 +43,7 @@ end
 ----------------------
 SawOsc={}
 SawOsc.__index=SawOsc
+setmetatable(SawOsc, {__call = function (cls, ...) return cls.new(...) end,})
 function SawOsc.new()
   local o={}
   setmetatable(o,SawOsc)
@@ -58,6 +61,7 @@ end
 ----------------------
 TriOsc={}
 TriOsc.__index=TriOsc
+setmetatable(TriOsc, {__call = function (cls, ...) return cls.new(...) end,})
 function TriOsc.new()
   local o={}
   setmetatable(o,TriOsc)
@@ -75,6 +79,7 @@ end
 ----------------------
 Line={}
 Line.__index = Line
+setmetatable(Line, {__call = function (cls, ...) return cls.new(...) end,})
 function Line.new()
   local o={}
   setmetatable(o,Line)
@@ -102,6 +107,7 @@ end
 ----------------------
 Filter={}
 Filter.__index=Filter
+setmetatable(Filter, {__call = function (cls, ...) return cls.new(...) end,})
 function Filter.new(filterType)
   local o={}
   setmetatable(o,Filter)
@@ -230,6 +236,7 @@ end
 ----------------------
 Voice={}
 Voice.__index=Voice
+setmetatable(Voice, {__call = function (cls, ...) return cls.new(...) end,})
 function Voice.new()
   local o={}
   setmetatable(o,Voice)
@@ -258,6 +265,7 @@ end
 ----------------------
 Synth={}
 Synth.__index=Synth
+setmetatable(Synth, {__call = function (cls, ...) return cls.new(...) end,})
 function Synth.new()
   local o={}
   setmetatable(o,Synth)
@@ -285,6 +293,7 @@ end
 ----------------------
 Metro={}
 Metro.__index=Metro
+setmetatable(Metro, {__call = function (cls, ...) return cls.new(...) end,})
 function Metro.new()
    local o={}
    setmetatable(o,Metro)
@@ -349,11 +358,11 @@ end
 ----------------------
 Sampler={}
 Sampler.__index=Sampler
+setmetatable(Sampler, {__call = function (cls, ...) return cls.new(...) end,})
 function Sampler.new(s)
    local o={}
    setmetatable(o,Sampler)
    o.sample=s
-   setmetatable(o.sample,smeta)
    o.grainsize=s.samplerate*30/1000
    o.grain1start=0
    o.grain1sindex=0
@@ -364,6 +373,7 @@ function Sampler.new(s)
    o.speed=1
    o.pitch=1
    o.loop=true
+   o.grainxfade=1
    return o
 end
 function Sampler:Process(sr)
@@ -382,10 +392,12 @@ function Sampler:Process(sr)
    local out={}
    local grain1channels=self:getChannels(self.grain1sindex+self.grain1start)
    local grain2channels=self:getChannels(self.grain2sindex+self.grain2start)
+   local nofx=self:getChannels(self.sindex)
    for i=1,self.sample.channels do
       local window1=math.cos(math.pi*0.5*self.grainwindex/self.grainsize)
       local window2=math.sin(math.pi*0.5*self.grainwindex/self.grainsize)
       out[i]=grain1channels[i]*window1+grain2channels[i]*window2
+      out[i]=out[i]*self.grainxfade+nofx[i]*(1-self.grainxfade)
    end
    self.grain1sindex=self.grain1sindex+1*self.pitch
    self.grain2sindex=self.grain2sindex+1*self.pitch
@@ -394,6 +406,11 @@ function Sampler:Process(sr)
    return unpack(out)
 end
 function Sampler.getChannels(self,i)
+   if self.loop==false and i>self.sample.frames then
+      local out={}
+      for i=1,self.sample.channels do out[i]=0 end
+      return out
+   end
    while i>self.sample.frames do i=i-self.sample.frames end
    while i<1 do i=i+self.sample.frames end
    if i==0 then i=1 end
@@ -408,6 +425,7 @@ end
 ----------------------
 Env={}
 Env.__index=Env
+setmetatable(Env, {__call = function (cls, ...) return cls.new(...) end,})
 function Env.new(v,d)
    local o={}
    setmetatable(o,Env)
@@ -446,6 +464,7 @@ end
 ----------------------
 Pat={}
 Pat.__index=Pat
+setmetatable(Pat, {__call = function (cls, ...) return cls.new(...) end,})
 function Pat.new(t)
    local o={}
    setmetatable(o,Pat)
@@ -511,4 +530,84 @@ function Pat:__tostring()
       return out..']'
    end
    return tprint(self.t)
+end
+----------------------
+----------------------
+PolySamplerVoice={}
+PolySamplerVoice.__index=PolySamplerVoice
+setmetatable(PolySamplerVoice, {__call = function (cls, ...) return cls.new(...) end,})
+function PolySamplerVoice.new(sample,params)
+   local o={}
+   setmetatable(o,PolySamplerVoice)
+   o.envValues={0,1,0}
+   o.envDurations={0.005,1}
+   o.start=0
+   for k,v in pairs(params) do o[k]=v end
+   o.env=Env(o.envValues,o.envDurations)
+   o.env.delta=0
+   o.sampler=Sampler(sample)
+   o.sampler.loop=false
+   o.sampler.sindex=o.start*o.sampler.sample.frames
+   return o
+end
+function PolySamplerVoice:Process(sr)
+   if self.env.delta<0 then
+      local out={}
+      for i=1,self.sampler.sample.channels do out[i]=0 end
+      return unpack(out)
+   else
+      return self.env:Process(sr)*self.sampler:Process(sr)
+   end
+end
+----------------------
+----------------------
+PolySampler={}
+PolySampler.__index=PolySampler
+setmetatable(PolySampler, {__call = function (cls, ...) return cls.new(...) end,})
+function PolySampler.new(s)
+   local o={}
+   setmetatable(o,PolySampler)
+   o.sample=s
+   o.voices={}
+   return o
+end
+function PolySampler:SetVoice(voice,key,value)
+   if type(voice[key])=='function' then
+      voice[key](voice,value)
+   elseif type(voice[key])=='number' then
+      voice[key]=value
+   elseif type(voice.sampler[key])=='function' then
+      voice.sampler[key](voice.sampler,value)
+   elseif type(voice.sampler[key])=='number' then
+      voice.sampler[key]=value
+   end
+end
+function PolySampler:SetVoices(key,value)
+   for i=1,#self.voices do
+      self:SetVoice(self.voices[i],key,value)
+   end
+end
+function PolySampler:Play(p)
+   local voice=PolySamplerVoice(self.sample,{})
+   for k,v in pairs(p) do
+      self:SetVoice(voice,k,v)
+   end
+   table.insert(self.voices,voice)
+end
+function PolySampler:Process(sr)
+   local out={}
+   for i=#self.voices,1,-1 do
+      if self.voices[i].env.delta<0 then table.remove(self.voices,i) end
+   end
+   for i=1,#self.voices do
+      local val={self.voices[i]:Process(sr)};
+      for i=1,#val do
+	 if out[i]==nil then
+	    out[i]=val[i]
+	 else
+	    out[i]=out[i]+val[i]
+	 end
+      end
+   end
+   return unpack(out)
 end

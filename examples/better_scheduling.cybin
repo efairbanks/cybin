@@ -1,20 +1,24 @@
 require 'cybin'
 require 'seq'
-m=Metro.new()
-s=Synth.new()
+m=Metro()
+s=Synth()
+P=Pat
+S=Seq
 function __process(sr)
    m:Process(sr)
    local out=s:Process(sr)
    return out,out
 end
 function play(time)
-   local interval=0.25
-   local seq=Seq.new({4,0,2,0}):degreesToChromatic()
-   seq=seq+Seq.new({0,3,4,0}):degreesToChromatic():expand(4)*1.01
-   m:Pat(Pat.new(seq+12):slow(2.5),function(x) s:PlayNote(x+48) end,interval)
-   m:Pat(Pat.new(seq+12):slow(2.525),function(x) s:PlayNote(x+48) end,interval)
+   local interval=(1/16)
+   local seq=S({0,0,0,0}):degreesToChromatic()
+   seq=seq+(S({0,1,2,3})+10):degreesToChromatic():expand(4)*1.01
+   m:Pat(P(seq):slow(4),function(x) s:PlayNote(x+12) end,interval)
+   m:Pat(P(seq:expand(2)+24):slow(4),function(x) s:PlayNote(x); end,interval)
    return interval
 end
 m:Interval('play')
 
+--[[
 play=nil
+--]]

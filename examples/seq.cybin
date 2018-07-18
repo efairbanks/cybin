@@ -2,6 +2,7 @@ Seq={}    -- Seq Class
 Seq.mt={} -- Seq Metatable
 Seq.pt={} -- Seq Prototype
 Seq.mt.__index=Seq.pt
+setmetatable(Seq, {__call = function (cls, ...) return cls.new(...) end,})
 ------------------------------
 function Seq.new(t)
   local seq={}
