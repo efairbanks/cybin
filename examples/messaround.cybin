@@ -4,11 +4,11 @@ require 'table-extended'
 m=Metro()
 kick_aif=cybin.loadaudiofile('KICK.AIF')
 snare_aif=cybin.loadaudiofile('SNARE.AIF')
-hat_wav=cybin.loadaudiofile('HAT.WAV')
+hat_wav=cybin.loadaudiofile('HAT.AIF')
 kick=PolySampler(kick_aif)
 snare=PolySampler(snare_aif)
 hat=PolySampler(hat_wav)
-glass=PolySampler(cybin.loadaudiofile('GLASS.WAV'))
+glass=PolySampler(cybin.loadaudiofile('GLASS.AIF'))
 P=Pat
 S=Seq
 
