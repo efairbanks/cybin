@@ -1,0 +1,7 @@
+require 'cybin'
+require 'table-extended'
+P=Pat
+p=P.genBjork(5,13)
+q=P.genBjork(3,13)
+print(P.genBjorkStructure(17,{13,9,5,2}))
+
