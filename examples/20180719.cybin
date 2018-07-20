@@ -1,7 +1,17 @@
 require 'cybin'
 require 'table-extended'
 P=Pat
-p=P.genBjork(5,13)
-q=P.genBjork(3,13)
-print(P.genBjorkStructure(17,{13,9,5,2}))
+_=P{}
+if m==nil then m=Metro() end
+if s==nil then s=Synth() end
+function __process(sr)
+   m:Process(sr)
+   return s:Process(sr)
+end
+function play(t)
+   m:Pat(P{P{0,1,2}:slow(1),3,7},function(x) s:PlayNote(60+x) end,1)
+   return 1
+end
+
+m:Interval("play")
 

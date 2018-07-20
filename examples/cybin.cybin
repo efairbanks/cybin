@@ -181,36 +181,36 @@ function Filter:CalcBiquad()
   end
   if self.filterType=="lowshelf" then
     if self.peakGain >= 0 then
-        norm = 1 / (1 + math.sqrt(2) * K + K * K);
-        self.a0 = (1 + math.sqrt(2*V) * K + V * K * K) * norm;
-        self.a1 = 2 * (V * K * K - 1) * norm;
-        self.a2 = (1 - math.sqrt(2*V) * K + V * K * K) * norm;
-        self.b1 = 2 * (K * K - 1) * norm;
-        self.b2 = (1 - math.sqrt(2) * K + K * K) * norm;
+      norm = 1 / (1 + math.sqrt(2) * K + K * K);
+      self.a0 = (1 + math.sqrt(2*V) * K + V * K * K) * norm;
+      self.a1 = 2 * (V * K * K - 1) * norm;
+      self.a2 = (1 - math.sqrt(2*V) * K + V * K * K) * norm;
+      self.b1 = 2 * (K * K - 1) * norm;
+      self.b2 = (1 - math.sqrt(2) * K + K * K) * norm;
     else
-        norm = 1 / (1 + math.sqrt(2*V) * K + V * K * K);
-        self.a0 = (1 + math.sqrt(2) * K + K * K) * norm;
-        self.a1 = 2 * (K * K - 1) * norm;
-        self.a2 = (1 - math.sqrt(2) * K + K * K) * norm;
-        self.b1 = 2 * (V * K * K - 1) * norm;
-        self.b2 = (1 - math.sqrt(2*V) * K + V * K * K) * norm;
+      norm = 1 / (1 + math.sqrt(2*V) * K + V * K * K);
+      self.a0 = (1 + math.sqrt(2) * K + K * K) * norm;
+      self.a1 = 2 * (K * K - 1) * norm;
+      self.a2 = (1 - math.sqrt(2) * K + K * K) * norm;
+      self.b1 = 2 * (V * K * K - 1) * norm;
+      self.b2 = (1 - math.sqrt(2*V) * K + V * K * K) * norm;
     end
   end
   if self.filterType=="highshelf" then
     if self.peakGain >= 0 then
-        norm = 1 / (1 + math.sqrt(2) * K + K * K);
-        self.a0 = (V + math.sqrt(2*V) * K + K * K) * norm;
-        self.a1 = 2 * (K * K - V) * norm;
-        self.a2 = (V - math.sqrt(2*V) * K + K * K) * norm;
-        self.b1 = 2 * (K * K - 1) * norm;
-        self.b2 = (1 - math.sqrt(2) * K + K * K) * norm;
+      norm = 1 / (1 + math.sqrt(2) * K + K * K);
+      self.a0 = (V + math.sqrt(2*V) * K + K * K) * norm;
+      self.a1 = 2 * (K * K - V) * norm;
+      self.a2 = (V - math.sqrt(2*V) * K + K * K) * norm;
+      self.b1 = 2 * (K * K - 1) * norm;
+      self.b2 = (1 - math.sqrt(2) * K + K * K) * norm;
     else
-        norm = 1 / (V + math.sqrt(2*V) * K + K * K);
-        self.a0 = (1 + math.sqrt(2) * K + K * K) * norm;
-        self.a1 = 2 * (K * K - 1) * norm;
-        self.a2 = (1 - math.sqrt(2) * K + K * K) * norm;
-        self.b1 = 2 * (K * K - V) * norm;
-        self.b2 = (V - math.sqrt(2*V) * K + K * K) * norm;
+      norm = 1 / (V + math.sqrt(2*V) * K + K * K);
+      self.a0 = (1 + math.sqrt(2) * K + K * K) * norm;
+      self.a1 = 2 * (K * K - 1) * norm;
+      self.a2 = (1 - math.sqrt(2) * K + K * K) * norm;
+      self.b1 = 2 * (K * K - V) * norm;
+      self.b2 = (V - math.sqrt(2*V) * K + K * K) * norm;
     end
   end
 end
@@ -295,64 +295,64 @@ Metro={}
 Metro.__index=Metro
 setmetatable(Metro, {__call = function (cls, ...) return cls.new(...) end,})
 function Metro.new()
-   local o={}
-   setmetatable(o,Metro)
-   o.events={}
-   o.pats={}
-   o.time=0
-   return o
+  local o={}
+  setmetatable(o,Metro)
+  o.events={}
+  o.pats={}
+  o.time=0
+  return o
 end
 function Metro:Process(sr)
-   local rmindices={}
-   local now=self.time
-   for i=1,#self.events do
-      if self.time>self.events[i].start then
-	 self.events[i].func(self.time)
-	 table.insert(rmindices,i)
-      end
-   end
-   for i=1,#rmindices do
-      table.remove(self.events,rmindices[#rmindices-i+1])
-   end
-   self.time=self.time+1/sr
-   return now
+  local rmindices={}
+  local now=self.time
+  for i=1,#self.events do
+    if self.time>self.events[i].start then
+      self.events[i].func(self.time)
+      table.insert(rmindices,i)
+    end
+  end
+  for i=1,#rmindices do
+    table.remove(self.events,rmindices[#rmindices-i+1])
+  end
+  self.time=self.time+1/sr
+  return now
 end
 function Metro:Pat(pat,handler,interval)
-   local function close(value)
-      return function(time)
-	 handler(value,time)
-      end
-   end
-   local events=pat:queryEvents(self.time,self.time+interval,1)
-   for i=1,#events do
-      events[i].func=close(events[i].value)
-   end
-   self:Events(events)
+  local function close(value)
+    return function(time)
+      handler(value,time)
+    end
+  end
+  local events=pat:queryEvents(self.time,self.time+interval,1)
+  for i=1,#events do
+    events[i].func=close(events[i].value)
+  end
+  self:Events(events)
 end
 function Metro:Event(start,func)
-   table.insert(self.events,{start=start,func=func})
+  table.insert(self.events,{start=start,func=func})
 end
 function Metro:Events(e)
-   for i=1,#e do
-      table.insert(self.events,e[i])
-   end
+  for i=1,#e do
+    table.insert(self.events,e[i])
+  end
 end
 function Metro:Interval(func)
-   local callback=nil
-   if type(func)=='function' then
-      callback=function(time)
-	 local nextTime=self.time+func(self.time)
-	 self:Event(nextTime,callback)
+  local callback=nil
+  if type(func)=='function' then
+    callback=function(time)
+      local nextTime=self.time+func(self.time)
+      self:Event(nextTime,callback)
+    end
+  elseif type(func)=='string' and _G[func]~=nil then
+    callback=function(time)
+      if _G[func]~=nil then
+        local nextTime=self.time+_G[func](self.time)
+        self:Event(nextTime,callback)
       end
-   elseif type(func)=='string' and _G[func]~=nil then
-      callback=function(time)
-	 if _G[func]~=nil then
-	    local nextTime=self.time+_G[func](self.time)
-	    self:Event(nextTime,callback)
-	 end
-      end
-   end
-   if callback~=nil then callback() end
+    end
+  end
+  if callback~=nil then callback() end
 end
 ----------------------
 ----------------------
@@ -360,65 +360,65 @@ Sampler={}
 Sampler.__index=Sampler
 setmetatable(Sampler, {__call = function (cls, ...) return cls.new(...) end,})
 function Sampler.new(s)
-   local o={}
-   setmetatable(o,Sampler)
-   o.sample=s
-   o.grainsize=s.samplerate*30/1000
-   o.grain1start=0
-   o.grain1sindex=0
-   o.grain2start=0
-   o.grain2sindex=0
-   o.grainwindex=0
-   o.sindex=1
-   o.speed=1
-   o.pitch=1
-   o.loop=true
-   o.grainxfade=1
-   return o
+  local o={}
+  setmetatable(o,Sampler)
+  o.sample=s
+  o.grainsize=s.samplerate*30/1000
+  o.grain1start=0
+  o.grain1sindex=0
+  o.grain2start=0
+  o.grain2sindex=0
+  o.grainwindex=0
+  o.sindex=1
+  o.speed=1
+  o.pitch=1
+  o.loop=true
+  o.grainxfade=1
+  return o
 end
 function Sampler:Process(sr)
-   local out={}
-   for i=1,self.sample.channels do out[i]=0 end
-   if self.loop==false and self.sindex>self.sample.frames then
-      return unpack(out)
-   end
-   if self.grainwindex >= self.grainsize then
-      self.grainwindex=0
-      self.grain1sindex=0
-      self.grain1start=self.grain2start+self.grain2sindex
-      self.grain2sindex=0
-      self.grain2start=self.sindex
-   end
-   local grain1channels=self:getChannels(self.grain1sindex+self.grain1start)
-   local grain2channels=self:getChannels(self.grain2sindex+self.grain2start)
-   local nofx=self:getChannels(self.sindex)
-   for i=1,self.sample.channels do
-      local window1=math.cos(math.pi*0.5*self.grainwindex/self.grainsize)
-      local window2=math.sin(math.pi*0.5*self.grainwindex/self.grainsize)
-      out[i]=grain1channels[i]*window1+grain2channels[i]*window2
-      out[i]=out[i]*self.grainxfade+nofx[i]*(1-self.grainxfade)
-   end
-   self.grain1sindex=self.grain1sindex+1*self.pitch
-   self.grain2sindex=self.grain2sindex+1*self.pitch
-   self.grainwindex=self.grainwindex+1
-   self.sindex=self.sindex+1*self.speed
-   return unpack(out)
+  local out={}
+  for i=1,self.sample.channels do out[i]=0 end
+  if self.loop==false and self.sindex>self.sample.frames then
+    return unpack(out)
+  end
+  if self.grainwindex >= self.grainsize then
+    self.grainwindex=0
+    self.grain1sindex=0
+    self.grain1start=self.grain2start+self.grain2sindex
+    self.grain2sindex=0
+    self.grain2start=self.sindex
+  end
+  local grain1channels=self:getChannels(self.grain1sindex+self.grain1start)
+  local grain2channels=self:getChannels(self.grain2sindex+self.grain2start)
+  local nofx=self:getChannels(self.sindex)
+  for i=1,self.sample.channels do
+    local window1=math.cos(math.pi*0.5*self.grainwindex/self.grainsize)
+    local window2=math.sin(math.pi*0.5*self.grainwindex/self.grainsize)
+    out[i]=grain1channels[i]*window1+grain2channels[i]*window2
+    out[i]=out[i]*self.grainxfade+nofx[i]*(1-self.grainxfade)
+  end
+  self.grain1sindex=self.grain1sindex+1*self.pitch
+  self.grain2sindex=self.grain2sindex+1*self.pitch
+  self.grainwindex=self.grainwindex+1
+  self.sindex=self.sindex+1*self.speed
+  return unpack(out)
 end
 function Sampler.getChannels(self,i)
-   if self.loop==false and i>self.sample.frames then
-      local out={}
-      for i=1,self.sample.channels do out[i]=0 end
-      return out
-   end
-   while i>self.sample.frames do i=i-self.sample.frames end
-   while i<1 do i=i+self.sample.frames end
-   if i==0 then i=1 end
-   local out={}
-   for j=1,self.sample.channels do
-      out[j]=self.sample[math.floor(i-1)*self.sample.channels+j]
-      if out[j]==nil then out[j]=0 end
-   end
-   return out
+  if self.loop==false and i>self.sample.frames then
+    local out={}
+    for i=1,self.sample.channels do out[i]=0 end
+    return out
+  end
+  while i>self.sample.frames do i=i-self.sample.frames end
+  while i<1 do i=i+self.sample.frames end
+  if i==0 then i=1 end
+  local out={}
+  for j=1,self.sample.channels do
+    out[j]=self.sample[math.floor(i-1)*self.sample.channels+j]
+    if out[j]==nil then out[j]=0 end
+  end
+  return out
 end
 ----------------------
 ----------------------
@@ -426,131 +426,131 @@ Env={}
 Env.__index=Env
 setmetatable(Env, {__call = function (cls, ...) return cls.new(...) end,})
 function Env.new(v,d)
-   local o={}
-   setmetatable(o,Env)
-   o.values=v
-   o.durations=d
-   o.times={}
-   local sum=0
-   for i=1,#o.durations do
-      o.times[i]=sum
-      sum=sum+o.durations[i]
-   end
-   o.times[#o.durations+1]=sum
-   o.delta=-1
-   o.out=0
-   return o
+  local o={}
+  setmetatable(o,Env)
+  o.values=v
+  o.durations=d
+  o.times={}
+  local sum=0
+  for i=1,#o.durations do
+    o.times[i]=sum
+    sum=sum+o.durations[i]
+  end
+  o.times[#o.durations+1]=sum
+  o.delta=-1
+  o.out=0
+  return o
 end
 function Env:Process(sr)
-   local i=1
-   if self.delta==-1 then return self.out end
-   if self.delta>=self.times[#self.times] then
-      self.delta=-1
-      self.out=self.values[#self.values]
+  local i=1
+  if self.delta==-1 then return self.out end
+  if self.delta>=self.times[#self.times] then
+    self.delta=-1
+    self.out=self.values[#self.values]
+    return self.out
+  end
+  for i=1,#self.durations do
+    if self.delta<=self.times[i+1] then
+      local interp=(self.delta-self.times[i])/self.durations[i]
+      self.out=self.values[i]*(1-interp)+self.values[i+1]*interp
+      self.delta=self.delta+(1/sr)
       return self.out
-   end
-   for i=1,#self.durations do
-      if self.delta<=self.times[i+1] then
-	 local interp=(self.delta-self.times[i])/self.durations[i]
-	 self.out=self.values[i]*(1-interp)+self.values[i+1]*interp
-	 self.delta=self.delta+(1/sr)
-	 return self.out
-      end
-   end
-   return self.out
+    end
+  end
+  return self.out
 end
 ----------------------
 ----------------------
 Pat={}
 setmetatable(Pat, {__call = function (cls, ...) return cls.new(...) end,})
 Pat.__index=function(t,k)
-   if type(k)=='number' then
-      return t.t[k]
-   else
-      return Pat[k]
-   end
+  if type(k)=='number' then
+    return t.t[k]
+  else
+    return Pat[k]
+  end
 end
 Pat.__newindex=function(t,k,v)
-   if type(k)=='number' then
-      t.t[k]=v
-   else
-      rawset(t,k,v)
-   end
+  if type(k)=='number' then
+    t.t[k]=v
+  else
+    rawset(t,k,v)
+  end
 end
 function Pat.new(t)
-   local o={}
-   setmetatable(o,Pat)
-   o.t={}
-   o.cycles=1
-   for i=1,#t do
-      if type(t[i])=='table' and getmetatable(t[i])~=Pat then
-	 o.t[i]=Pat(t[i])
-      else
-	 o.t[i]=t[i]
-      end
-   end
-   return o
+  local o={}
+  setmetatable(o,Pat)
+  o.t={}
+  o.cycles=1
+  for i=1,#t do
+    if type(t[i])=='table' and getmetatable(t[i])~=Pat then
+      o.t[i]=Pat(t[i])
+    else
+      o.t[i]=t[i]
+    end
+  end
+  return o
 end
 function Pat.genDup(n,size)
-   local pat=Pat{}
-   for i=1,size do pat[i]=n end
-   return pat
+  local pat=Pat{}
+  for i=1,size do pat[i]=n end
+  return pat
 end
 function Pat.genBjork(nPegs,nHoles)
-    local pegs,holes,lastPegIndex,work,pegs,holes
-    local function genDup(n,size)
-      local t={}
-      for i=1,size do t[i]=n end
-      return t
-    end
-    local flatten=function(arr)
-      local result={}
-      local function flatten(arr)
-        for _, v in ipairs(arr) do
-          if type(v)=="table" then
-            flatten(v)
-          else
-            table.insert(result,v)
-          end
+  local pegs,holes,lastPegIndex,work,pegs,holes
+  local function genDup(n,size)
+    local t={}
+    for i=1,size do t[i]=n end
+    return t
+  end
+  local flatten=function(arr)
+    local result={}
+    local function flatten(arr)
+      for _, v in ipairs(arr) do
+        if type(v)=="table" then
+          flatten(v)
+        else
+          table.insert(result,v)
         end
       end
-      flatten(arr)
-      return result
     end
-    local function concat(a,b)
-      if b==nil then return a end
-      local ret={}
-      for i=1,#a do ret[#ret+1]=a[i] end
-      for i=1,#b do ret[#ret+1]=b[i] end
-      return ret
+    flatten(arr)
+    return result
+  end
+  local function concat(a,b)
+    if b==nil then return a end
+    local ret={}
+    for i=1,#a do ret[#ret+1]=a[i] end
+    for i=1,#b do ret[#ret+1]=b[i] end
+    return ret
+  end
+  local function selectRange(t,from,to)
+    local ret={}
+    for i=from,to,1 do ret[#ret+1]=t[i] end
+    return ret
+  end
+  if nPegs<1 then return Pat.genDup(0,nHoles) end
+  nHoles=nHoles-nPegs
+  pegs=genDup({1},nPegs)
+  holes=genDup({0},nHoles)
+  lastPegIndex=0
+  work=function()
+    if (lastPegIndex~=0) then
+      holes=selectRange(pegs,lastPegIndex,#pegs)
+      pegs=selectRange(pegs,1,lastPegIndex-1)
     end
-    local function selectRange(t,from,to)
-        local ret={}
-        for i=from,to,1 do ret[#ret+1]=t[i] end
-        return ret
+    nPegs=#pegs
+    nHoles=#holes
+    for inc=0,nHoles-1,1 do
+      pegs[(inc%nPegs)+1]=concat(pegs[(inc%nPegs)+1],holes[inc+1])
     end
-    if nPegs<1 then return Pat.genDup(0,nHoles) end
-    nHoles=nHoles-nPegs
-    pegs=genDup({1},nPegs)
-    holes=genDup({0},nHoles)
-    lastPegIndex=0
-    work=function()
-        if (lastPegIndex~=0) then
-            holes=selectRange(pegs,lastPegIndex,#pegs)
-            pegs=selectRange(pegs,1,lastPegIndex-1)
-        end
-        nPegs=#pegs
-        nHoles=#holes
-        for inc=0,nHoles-1,1 do
-            pegs[(inc%nPegs)+1]=concat(pegs[(inc%nPegs)+1],holes[inc+1])
-        end
-        lastPegIndex=(nHoles%nPegs)+1
-    end
+    lastPegIndex=(nHoles%nPegs)+1
+  end
+  work()
+  while (lastPegIndex~=1) and (lastPegIndex~=(nPegs)) do
     work()
-    while (lastPegIndex~=1) and (lastPegIndex~=(nPegs)) do
-        work()
-    end
-    return Pat.new(flatten(pegs))
+  end
+  return Pat.new(flatten(pegs))
 end
 function Pat.genBjorkStructure(size,selects)
   local currentLevel=Pat.genDup(1,size)
@@ -562,18 +562,18 @@ function Pat.genBjorkStructure(size,selects)
   return ret
 end
 function Pat:bjorkSelect(select)
-    local selectIndex,selectPattern,outPattern
-    selectIndex=1
-    selectPattern=Pat.genBjork(select,Pat.sum(self))
-    outPattern=Pat.new({})
-    for i=1,#self.t do outPattern[i]=self[i] end
-    for i=1,#outPattern.t do
-        if outPattern[i]>0 then
-            outPattern[i]=outPattern[i]*selectPattern[selectIndex]
-            selectIndex=selectIndex+1
-        end
+  local selectIndex,selectPattern,outPattern
+  selectIndex=1
+  selectPattern=Pat.genBjork(select,Pat.sum(self))
+  outPattern=Pat.new({})
+  for i=1,#self.t do outPattern[i]=self[i] end
+  for i=1,#outPattern.t do
+    if outPattern[i]>0 then
+      outPattern[i]=outPattern[i]*selectPattern[selectIndex]
+      selectIndex=selectIndex+1
     end
-    return outPattern
+  end
+  return outPattern
 end
 function Pat:wrapAt(index)
   local len=0
@@ -582,7 +582,8 @@ function Pat:wrapAt(index)
 end
 function Pat:selectRange(from,to)
   local ret=Pat{}
-  for i=from,to,1 do ret.t[#ret.t]=self.t[i] end
+  for i=from,to,1 do ret.t[#ret.t+1]=self.t[i] end
+  return ret
 end
 function Pat:sum()
   local sum=0
@@ -658,50 +659,50 @@ function Pat.derive(self)
   return ret
 end
 function Pat:queryEvents(a,b,c)
-   if a>b then local temp=b; b=a; a=temp; end
-   c=c/self.cycles
-   a=a*c;b=b*c
-   local out={}
-   local span=b-a
-   local step=1/#self.t
-   local i=0
-   local eventOffset=math.ceil(a/step)
-   local time=eventOffset*step
-   while time<b do
-      local e=self.t[((i+eventOffset)%#self.t)+1]
-      local start=time
-      local stop=time+step
-      if type(e)=='table' then
-	 local epsilon=0.000000001 --ensure we don't accidentally get the beginning of the next pat
-	 -- ...due to rounding errors
-	 local events=e:queryEvents(start,stop,1/step-epsilon)
-	 for i=1,#events do table.insert(out,events[i]) end
-      else
-	 table.insert(out,{start=start,stop=stop,value=e})
-      end
-      i=i+1
-      time=time+step
-   end
-   for i=1,#out do
-      out[i].start=out[i].start/c
-      out[i].stop=out[i].stop/c
-   end
-   return out
+  if a>b then local temp=b; b=a; a=temp; end
+  c=c/self.cycles
+  a=a*c;b=b*c
+  local out={}
+  local span=b-a
+  local step=1/#self.t
+  local i=0
+  local eventOffset=math.ceil(a/step)
+  local time=eventOffset*step
+  while time<b do
+    local e=self.t[((i+eventOffset)%#self.t)+1]
+    local start=time
+    local stop=time+step
+    if type(e)=='table' then
+      local epsilon=0.000000001 --ensure we don't accidentally get the beginning of the next pat
+      -- ...due to rounding errors
+      local events=e:queryEvents(start,stop,1/step-epsilon)
+      for i=1,#events do table.insert(out,events[i]) end
+    else
+      table.insert(out,{start=start,stop=stop,value=e})
+    end
+    i=i+1
+    time=time+step
+  end
+  for i=1,#out do
+    out[i].start=out[i].start/c
+    out[i].stop=out[i].stop/c
+  end
+  return out
 end
 function Pat:slow(x)
-   self.cycles=x
-   return self
+  self.cycles=x
+  return self
 end
 function Pat:apply(f)
-   for i=1,#self.t do
-      local value=self.t[i]
-      if type(value)=='table' then
-         self.t[i]=value:mapValues(f)
-      else
-	       self.t[i]=f(value)
-      end
-   end
-   return self
+  for i=1,#self.t do
+    local value=self.t[i]
+    if type(value)=='table' then
+      self.t[i]=value:mapValues(f)
+    else
+      self.t[i]=f(value)
+    end
+  end
+  return self
 end
 function Pat:mapValues(f) -- backwards compatibilty
   return self:apply(f)
@@ -730,16 +731,20 @@ function Pat.normalize(self,func)
   return ret
 end
 function Pat:__tostring()
-   local function tprint(t)
-      local out='['
-      for i=1,#t do
-	 local separator=' '
-	 if i==1 then separator='' end
-	 out=out..separator..tostring(t[i])
+  local function tprint(t)
+    local out='['
+    for i=1,#t do
+      local separator=' '
+      if i==1 then separator='' end
+      if type(t[i])=='table' and #t[i]<1 and #t[i].t<1 then
+        out=out..separator..'.'
+      else
+        out=out..separator..tostring(t[i])
       end
-      return out..']'
-   end
-   return tprint(self.t)
+    end
+    return out..']'
+  end
+  return tprint(self.t)
 end
 function Pat:__concat(pat)
   if pat==nil then return self end
@@ -767,7 +772,7 @@ function Pat.__pow(a,b)
   return Pat.combine(a,b,function(a,b) return a^b end)
 end
 function Pat.__unm(self)
-  return Pat.combine(0,self,function(a,b) return a+b end)
+  return Pat.combine(0,self,function(a,b) return a-b end)
 end
 ----------------------
 ----------------------
@@ -775,27 +780,27 @@ PolySamplerVoice={}
 PolySamplerVoice.__index=PolySamplerVoice
 setmetatable(PolySamplerVoice, {__call = function (cls, ...) return cls.new(...) end,})
 function PolySamplerVoice.new(sample,params)
-   local o={}
-   setmetatable(o,PolySamplerVoice)
-   o.envValues={0,1,0}
-   o.envDurations={0.005,1}
-   o.start=0
-   for k,v in pairs(params) do o[k]=v end
-   o.env=Env(o.envValues,o.envDurations)
-   o.env.delta=0
-   o.sampler=Sampler(sample)
-   o.sampler.loop=false
-   o.sampler.sindex=o.start*o.sampler.sample.frames
-   return o
+  local o={}
+  setmetatable(o,PolySamplerVoice)
+  o.envValues={0,1,0}
+  o.envDurations={0.005,1}
+  o.start=0
+  for k,v in pairs(params) do o[k]=v end
+  o.env=Env(o.envValues,o.envDurations)
+  o.env.delta=0
+  o.sampler=Sampler(sample)
+  o.sampler.loop=false
+  o.sampler.sindex=o.start*o.sampler.sample.frames
+  return o
 end
 function PolySamplerVoice:Process(sr)
-   if self.env.delta<0 then
-      local out={}
-      for i=1,self.sampler.sample.channels do out[i]=0 end
-      return unpack(out)
-   else
-      return self.env:Process(sr)*self.sampler:Process(sr)
-   end
+  if self.env.delta<0 then
+    local out={}
+    for i=1,self.sampler.sample.channels do out[i]=0 end
+    return unpack(out)
+  else
+    return self.env:Process(sr)*self.sampler:Process(sr)
+  end
 end
 ----------------------
 ----------------------
@@ -803,50 +808,50 @@ PolySampler={}
 PolySampler.__index=PolySampler
 setmetatable(PolySampler, {__call = function (cls, ...) return cls.new(...) end,})
 function PolySampler.new(s)
-   local o={}
-   setmetatable(o,PolySampler)
-   o.sample=s
-   o.voices={}
-   return o
+  local o={}
+  setmetatable(o,PolySampler)
+  o.sample=s
+  o.voices={}
+  return o
 end
 function PolySampler:SetVoice(voice,key,value)
-   if type(voice[key])=='function' then
-      voice[key](voice,value)
-   elseif type(voice[key])=='number' then
-      voice[key]=value
-   elseif type(voice.sampler[key])=='function' then
-      voice.sampler[key](voice.sampler,value)
-   elseif type(voice.sampler[key])=='number' then
-      voice.sampler[key]=value
-   end
+  if type(voice[key])=='function' then
+    voice[key](voice,value)
+  elseif type(voice[key])=='number' then
+    voice[key]=value
+  elseif type(voice.sampler[key])=='function' then
+    voice.sampler[key](voice.sampler,value)
+  elseif type(voice.sampler[key])=='number' then
+    voice.sampler[key]=value
+  end
 end
 function PolySampler:SetVoices(key,value)
-   for i=1,#self.voices do
-      self:SetVoice(self.voices[i],key,value)
-   end
+  for i=1,#self.voices do
+    self:SetVoice(self.voices[i],key,value)
+  end
 end
 function PolySampler:Play(p)
-   local voice=PolySamplerVoice(self.sample,{})
-   for k,v in pairs(p) do
-      self:SetVoice(voice,k,v)
-   end
-   table.insert(self.voices,voice)
+  local voice=PolySamplerVoice(self.sample,{})
+  for k,v in pairs(p) do
+    self:SetVoice(voice,k,v)
+  end
+  table.insert(self.voices,voice)
 end
 function PolySampler:Process(sr)
-   local out={}
-   for i=1,self.sample.channels do out[i]=0 end
-   for i=#self.voices,1,-1 do
-      if self.voices[i].env.delta<0 then table.remove(self.voices,i) end
-   end
-   for i=1,#self.voices do
-      local val={self.voices[i]:Process(sr)};
-      for i=1,#val do
-	 if out[i]==nil then
-	    out[i]=val[i]
-	 else
-	    out[i]=out[i]+val[i]
-	 end
+  local out={}
+  for i=1,self.sample.channels do out[i]=0 end
+  for i=#self.voices,1,-1 do
+    if self.voices[i].env.delta<0 then table.remove(self.voices,i) end
+  end
+  for i=1,#self.voices do
+    local val={self.voices[i]:Process(sr)};
+    for i=1,#val do
+      if out[i]==nil then
+        out[i]=val[i]
+      else
+        out[i]=out[i]+val[i]
       end
-   end
-   return unpack(out)
+    end
+  end
+  return unpack(out)
 end
