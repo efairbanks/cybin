@@ -4,14 +4,33 @@ P=Pat
 _=P{}
 if m==nil then m=Metro() end
 if s==nil then s=Synth() end
+if g==nil then g=PolySampler(cybin.loadaudiofile('KICK.AIF')) end
+if sn==nil then sn=PolySampler(cybin.loadaudiofile('SNARE.AIF')) end
+if h==nil then h=PolySampler(cybin.loadaudiofile('HAT.AIF')) end
 function __process(sr)
    m:Process(sr)
-   return s:Process(sr)
+   local out=s:Process(sr)+g:Process(sr)*0.17+sn:Process(sr)*0.3+h:Process(sr)*0.07
+   return out,out
 end
+env={}
+
 function play(t)
-   m:Pat(P{P{0,1,2}:slow(1),3,7},function(x) s:PlayNote(60+x) end,1)
-   return 1
+   local d=1/8
+   m:Pat(P.genBjork(3,8):integrate():slow(4/2)*3,function(x) env.kickPitch=x end,d)
+   m:Pat(P{0,1,2,3,4}:slow(5)*0.05,function(x) env.kickSpeed=x end,d)
+   m:Pat(P.genDup(0,64),function(x,t) g:SetVoices('grainsize',(math.cos(math.pi*math.fmod(t,2)*(1/2))+1.1)*5000) end,d)
+   m:Pat(P.genBjork(7,16):replace(0,_):slow(2),function(x) g:Play{pitch=env.kickPitch,speed=env.kickSpeed} end,d)
+   --
+   m:Pat(P{_,1,_,P{1,P{_,1},1}:slow(3)}:slow(2),function(x) sn:Play({speed=0.6,pitch=3}) end,d)
+   --
+   m:Pat(P.genBjork(8,20):sequencedSubstitute({{4,1,2,0.5,10,1/4}}):replace(1,_):slow(20/8),function(x,t) h:Play{pitch=x,speed=math.fmod(t,1)+0.1} end,d)
+   return d
 end
 
 m:Interval("play")
+
+play=nil
+
+
+
 

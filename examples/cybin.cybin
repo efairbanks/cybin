@@ -480,10 +480,11 @@ end
 function Pat.new(t)
   local o={}
   setmetatable(o,Pat)
-  o.t={}
-  o.cycles=1
+  o.t=t.t or {}
+  o.cycles=t.cycles or 1
+  o.parallel=t.parallel or false
   for i=1,#t do
-    if type(t[i])=='table' and getmetatable(t[i])~=Pat then
+    if type(t[i])=='table' then
       o.t[i]=Pat(t[i])
     else
       o.t[i]=t[i]
@@ -565,7 +566,8 @@ function Pat:bjorkSelect(select)
   local selectIndex,selectPattern,outPattern
   selectIndex=1
   selectPattern=Pat.genBjork(select,Pat.sum(self))
-  outPattern=Pat.new({})
+  outPattern=Pat.new(self)
+  outPattern.t={}
   for i=1,#self.t do outPattern[i]=self[i] end
   for i=1,#outPattern.t do
     if outPattern[i]>0 then
@@ -578,10 +580,15 @@ end
 function Pat:wrapAt(index)
   local len=0
   if self.t==nil then len=#self else len=#self.t end
-  return self[((index-1)%len)+1]
+  local out=self[((index-1)%len)+1]
+  if type(out)=='table' then
+    return Pat(out)
+  else
+    return out
+  end
 end
 function Pat:selectRange(from,to)
-  local ret=Pat{}
+  local ret=Pat(self);ret.t={}
   for i=from,to,1 do ret.t[#ret.t+1]=self.t[i] end
   return ret
 end
@@ -597,24 +604,40 @@ function Pat:sum()
   return sum
 end
 function Pat.combine(a,b,operator)
-  local ret=Pat.new({})
-  if type(a)=="table" and type(b)=="table" then
-    for i=1,math.max(#a.t,#b.t) do ret[i]=operator(Pat.wrapAt(a,i),Pat.wrapAt(b,i)) end
+  local function opwrapper(a,b)
+  if a==nil or b==nil then
+      return Pat{}
+    else
+      return operator(a,b)
+    end
+  end
+  local ret
+  if type(a)=='table' then
+    ret=Pat(a);ret.t={}
+  elseif type(b)=='table' then
+    ret=Pat(b);ret.t={}
+  else
+    ret=Pat{}
+  end
+  if a==nil or b==nil then
+    ret=Pat{}
+  elseif type(a)=="table" and type(b)=="table" then
+    for i=1,math.max(#a.t,#b.t) do ret[i]=opwrapper(Pat.wrapAt(a,i),Pat.wrapAt(b,i)) end
   elseif type(a)=="number" and type(b)=="table" then
-    for i=1,#b.t do ret[i]=operator(a,Pat.wrapAt(b,i)) end
+    for i=1,#b.t do ret[i]=opwrapper(a,Pat.wrapAt(b,i)) end
   elseif type(a)=="table" and type(b)=="number" then
-    for i=1,#a.t do ret[i]=operator(Pat.wrapAt(a,i),b) end
+    for i=1,#a.t do ret[i]=opwrapper(Pat.wrapAt(a,i),b) end
   end
   return ret
 end
 function Pat.substitute(self,values)
-  local ret=Pat.new{}
+  local ret=Pat(self);ret.t={}
   for i=1,#self.t do ret[i]=Pat.wrapAt(values,self[i]) end
   return ret
 end
 function Pat.sequencedSubstitute(self,values)
   local valuesIndices={}
-  local ret=Pat.new{}
+  local ret=Pat(self);ret.t={}
   for i=1,#self.t do
     local indicesIndex=self[i]
     if valuesIndices[indicesIndex]==nil then valuesIndices[indicesIndex]=1 end
@@ -624,7 +647,7 @@ function Pat.sequencedSubstitute(self,values)
   return ret
 end
 function Pat.expand(self,by)
-  local ret=Pat.new({})
+  local ret=Pat(self);ret.t={}
   local retIndex=1
   for i=1,#self.t do
     for j=1,by do
@@ -635,7 +658,7 @@ function Pat.expand(self,by)
   return ret
 end
 function Pat.replace(self,a,b)
-  local ret=Pat.new({})
+  local ret=Pat(self);ret.t={}
   for i=1,#self.t do
     ret[i]=self[i]
     if ret[i]==a then ret[i]=b end
@@ -643,7 +666,7 @@ function Pat.replace(self,a,b)
   return ret
 end
 function Pat.integrate(self)
-  local ret=Pat.new({})
+  local ret=Pat(self);ret.t={}
   for i=1,#self.t do
     ret[i]=self[i]
     if i>1 then ret[i]=ret[i]+ret[i-1] end
@@ -651,7 +674,7 @@ function Pat.integrate(self)
   return ret
 end
 function Pat.derive(self)
-  local ret=Pat.new({})
+  local ret=Pat(self);ret.t={}
   for i=1,#self.t do
     ret[i]=self[i]
     if i>1 then ret[i]=ret[i]-self[i-1] end
@@ -668,20 +691,34 @@ function Pat:queryEvents(a,b,c)
   local i=0
   local eventOffset=math.ceil(a/step)
   local time=eventOffset*step
-  while time<b do
-    local e=self.t[((i+eventOffset)%#self.t)+1]
-    local start=time
-    local stop=time+step
-    if type(e)=='table' then
-      local epsilon=0.000000001 --ensure we don't accidentally get the beginning of the next pat
-      -- ...due to rounding errors
-      local events=e:queryEvents(start,stop,1/step-epsilon)
-      for i=1,#events do table.insert(out,events[i]) end
-    else
-      table.insert(out,{start=start,stop=stop,value=e})
+  local epsilon=0.000000001 --ensure we don't accidentally get the beginning of the next pat
+  if self.parallel then
+    for i=1,#self.t do
+      local e=self.t[i]
+      local start=a
+      local stop=b
+      if type(e)=='table' then
+        local events=e:queryEvents(start,stop,1)
+        for i=1,#events do table.insert(out,events[i]) end
+      else
+        table.insert(out,{start=start,stop=stop,value=e})
+      end
     end
-    i=i+1
-    time=time+step
+  else
+    while time<b do
+      local e=self.t[((i+eventOffset)%#self.t)+1]
+      local start=time
+      local stop=time+step
+      if type(e)=='table' then
+        -- ...due to rounding errors
+        local events=e:queryEvents(start,stop,1/step-epsilon)
+        for i=1,#events do table.insert(out,events[i]) end
+      else
+        table.insert(out,{start=start,stop=stop,value=e})
+      end
+      i=i+1
+      time=time+step
+    end
   end
   for i=1,#out do
     out[i].start=out[i].start/c
@@ -689,9 +726,20 @@ function Pat:queryEvents(a,b,c)
   end
   return out
 end
+function Pat:p()
+  local ret=Pat(self)
+  ret.parallel=true
+  return ret
+end
 function Pat:slow(x)
-  self.cycles=x
-  return self
+  local ret=Pat(self)
+  ret.cycles=x
+  return ret
+end
+function Pat:fast(x)
+  local ret=Pat(self)
+  ret.cycles=1/x
+  return ret
 end
 function Pat:apply(f)
   for i=1,#self.t do
