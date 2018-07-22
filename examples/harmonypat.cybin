@@ -1,0 +1,8 @@
+require 'cybin'
+s=PolySampler(cybin.loadaudiofile('GLASS.AIF'))
+function __process(sr) local out=s:Process(sr); return out,out end
+s:Play({note2pitch=60})
+s:Play({note2pitch=63})
+s:Play({note2pitch=67})
+s:Play({note2pitch=70})
+s:Play({note2pitch=36,speed=0.5})

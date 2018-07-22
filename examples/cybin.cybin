@@ -374,7 +374,12 @@ function Sampler.new(s)
   o.pitch=1
   o.loop=true
   o.grainxfade=1
+  o.basenote=60
   return o
+end
+function Sampler:note2pitch(n,sr)
+   local scaler=math.pow(2,(n-self.basenote)/12)
+   self.pitch=scaler
 end
 function Sampler:Process(sr)
   local out={}
