@@ -801,9 +801,8 @@ function Pat:__tostring()
 end
 function Pat:__concat(pat)
   if pat==nil then return self end
-  local ret=Pat{}
-  for i=1,#self.t do table.insert(ret,self.t[i]) end
-  for i=1,#pat.t do table.insert(ret,pat.t[i]) end
+  local ret=Pat(self);
+  for i=1,#pat.t do table.insert(ret.t,pat.t[i]) end
   return ret
 end
 function Pat.__add(a,b)
@@ -870,11 +869,11 @@ end
 function PolySampler:SetVoice(voice,key,value)
   if type(voice[key])=='function' then
     voice[key](voice,value)
-  elseif type(voice[key])=='number' then
+  elseif voice[key]~=nil then
     voice[key]=value
   elseif type(voice.sampler[key])=='function' then
     voice.sampler[key](voice.sampler,value)
-  elseif type(voice.sampler[key])=='number' then
+  elseif voice.sampler[key]~=nil then
     voice.sampler[key]=value
   end
 end
