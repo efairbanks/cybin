@@ -1,7 +1,0 @@
-require 'cybin'
-require 'seq'
-
-s=Seq.genBjork(3,13)*Seq.genBjork(1,3)
-print(s)
-
-print(Seq.genBjorkStructure(17,{9,6,3,2}))

@@ -1,6 +1,0 @@
-require 'cybin'
-a=cybin.loadaudiofile('KICK.AIF')
-p=PolySamplerVoice(a,{envValues={0,1,0},envDurations={0.001,10},start=0})
-p.sampler.speed=1
-p.sampler.pitch=1
-function __process(sr) local out=p:Process(sr); return out,out end

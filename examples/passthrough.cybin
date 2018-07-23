@@ -1,9 +1,0 @@
-require "cybin"
-s=cybin.loadaudiofile("test.wav")
-x=Sampler.new(s)
-function __process(sr)
-   x.grainsize=300
-   x.pitch=5/4
-   x.speed=0.1
-   return x:Process(sr)
-end

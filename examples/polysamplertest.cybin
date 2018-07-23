@@ -1,6 +1,0 @@
-require 'cybin'
-a=cybin.loadaudiofile('KICK.AIF')
-p=PolySampler(a)
-p:Play({speed=0.0001})
-function __process(sr) local out=p:Process(sr); return out,out end
-
