@@ -4,7 +4,7 @@ __thisIsAnOverrideableCybinSystemMethod
 thisIsAFunctionOrStaticMethod
 thisisanattribute
 ThisIsAnInstanceMethod
-MethodsShouldBeInstantiableLikeThis()
+ClassesShouldBeInstantiableLikeThis()
 
 
 
