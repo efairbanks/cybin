@@ -7,12 +7,19 @@ m=Metro()
 kick=PolySampler(cybin.loadaudiofile('KICK.AIF'))
 snare=PolySampler(cybin.loadaudiofile('SNARE.AIF'))
 hat=PolySampler(cybin.loadaudiofile('HAT.AIF'))
-env={}
+comp=Compressor(-20,3,0.0001,0.15,5,48000)
+hpass=Filter()
+hpass:SetType('highpass')
+hpass:SetFreq(60,48000)
+env={bassNote=0}
 
 function __process(sr)
-   local out=math.atan(s:Process(sr)*50)*0.3+kick:Process(sr)*1.15+snare:Process(sr)+hat:Process(sr)*0.3
+   local out=math.atan(s:Process(sr)*50)*0.3+kick:Process(sr)*1.9+snare:Process(sr)+hat:Process(sr)*0.3
+   out=out*0.5
+   out=hpass:Process(out)
+   local compd=comp:Process(out)
    m:Process(sr)
-   return out,out
+   return compd,compd
 end
 
 function play(t)

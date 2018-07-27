@@ -1,0 +1,35 @@
+require 'cybin'
+buf={}
+for i=1,5000 do buf[i]=0 end
+buf=Interp(buf)
+bufIndex=-1
+delta=1
+freq=2000
+s=SinOsc()
+s.freq=440
+mod=SinOsc()
+mod.freq=5.678
+chorusAmount=60
+mod2=SinOsc()
+mod2.freq=0.123
+
+function __process(sr)
+   bufIndex=bufIndex+1
+   while bufIndex>#buf.t do bufIndex=bufIndex-#buf.t end
+   --local env=math.sin(math.pow(1-math.fmod(sample*2.25/sr,1),20)*2*math.pi)
+   s.freq=1000+mod2:Process(sr)*950
+   local out=math.atan(s:Process(sr)*15)
+   --buf[bufIndex]=out
+   buf[bufIndex]=out+buf[bufIndex+1+(mod:Process(sr)+1)*chorusAmount]*0.85
+   return buf[(bufIndex+1)]*0.1
+end
+
+__process=nil
+
+print(bufIndex)
+
+for i=1,#buf.t do print(buf[i]) end
+
+for k,v in pairs(buf.t) do print(k,v) end
+for k,v in pairs(buf) do print(k,v) end
+print(buf.lastIndex)

@@ -958,6 +958,8 @@ function PolySampler:Process(sr)
   end
   return unpack(out)
 end
+----------------------
+----------------------
 Compressor={}
 Compressor.__index=Compressor
 setmetatable(Compressor, {__call = function (cls, ...) return cls.new(...) end,})
@@ -989,4 +991,71 @@ function Compressor:Process(input)
    local signIn=1
    if input<0 then signIn=-1 end
    return db2lin(dBin-dBaboveThreshold+dBaboveThreshold/self.ratio)*db2lin(self.makeup)*signIn
+end
+----------------------
+----------------------
+Interp={}
+setmetatable(Interp,{__call=function(cls,...) return cls.new(...) end})
+function Interp.new(t)
+   local o={}
+   o.t={}
+   for i=1,#t do o.t[i]=t[i] end
+   setmetatable(o,Interp)
+   return o
+end
+function Interp:Write(k,v)
+   if self.lastIndex==nil or self.lastIndex==k then
+      k=math.floor(k)
+      while k<=0 do k=k+#self.t end
+      while k>#self.t do k=k-#self.t end
+      self.t[k]=v
+      self.lastIndex=k
+   else
+      local fwdDistance=k-self.lastIndex
+      while fwdDistance<0 do fwdDistance=fwdDistance+#self.t end
+      while fwdDistance>#self.t do fwdDistance=fwdDistance-#self.t end
+      local bckDistance=self.lastIndex-k
+      while bckDistance<0 do bckDistance=bckDistance+#self.t end
+      while bckDistance>#self.t do bckDistance=bckDistance-#self.t end
+      local from=self.t[self.lastIndex]
+      local to=v
+      if fwdDistance<bckDistance then
+	 for i=0,fwdDistance do
+	    local interp=i/fwdDistance
+	    self.t[self.lastIndex]=from*(1-interp)+to*interp
+	    if i~=fwdDistance then self.lastIndex=self.lastIndex+1 end
+	    if self.lastIndex>#self.t then self.lastIndex=self.lastIndex-#self.t end
+	 end
+      else
+	 for i=0,bckDistance do
+	    local interp=i/bckDistance
+	    self.t[self.lastIndex]=from*(1-interp)+to*interp
+	    if i~=bckDistance then self.lastIndex=self.lastIndex-1 end
+	    if self.lastIndex<1 then self.lastIndex=self.lastIndex+#self.t end
+	 end
+      end
+   end
+end
+function Interp:Read(k)
+   local int=math.floor(k)
+   local frac=math.fmod(k,1)
+   while int<=0 do int=int+#self.t end
+   while int>#self.t do int=int-#self.t end
+   local nextInt=int+1
+   if nextInt>#self.t then nextInt=nextInt-#self.t end
+   return self.t[int]*(1-frac)+self.t[nextInt]*frac
+end
+Interp.__index=function(self,k)
+   if type(k)=='number' then
+      return self:Read(k)
+   else
+      return Interp[k]
+   end
+end
+Interp.__newindex=function(self,k,v)
+   if type(k)=='number' then
+      self:Write(k,v)
+   else
+      rawset(self,k,v)
+   end
 end
