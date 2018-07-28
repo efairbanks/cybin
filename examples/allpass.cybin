@@ -1,0 +1,18 @@
+require 'cybin'
+b=Allpass(2143,0.95)
+c=Allpass(3254,0.95)
+d=Allpass(2354,0.95)
+o=SinOsc()
+e=Env({0,1,0},{0.01,0.2})
+function __process(sr)
+   if e.delta<0 then
+      o.freq=math.pow(math.random(),2)*1500+30
+      e.delta=0
+   end
+   local out=math.atan(o:Process(sr)*5)*math.pow(e:Process(sr),5)
+   out=b:Process(out)
+   out=c:Process(out)
+   out=d:Process(out)
+   out=out*0.01
+   return out,out
+end

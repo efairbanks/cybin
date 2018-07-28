@@ -12,11 +12,15 @@ hpass=Filter()
 hpass:SetType('highpass')
 hpass:SetFreq(60,48000)
 env={bassNote=0}
+verb=Allpass(500,0.7)
 
 function __process(sr)
-   local out=math.atan(s:Process(sr)*50)*0.3+kick:Process(sr)*1.9+snare:Process(sr)+hat:Process(sr)*0.3
+   local out=math.atan(s:Process(sr)*50)*0.9
+   out=out+verb:Process(out)*0.8
+   out=out*0.3
+   out=out+kick:Process(sr)*1.1+snare:Process(sr)+hat:Process(sr)*0.3
    out=out*0.5
-   out=hpass:Process(out)
+   out=hpass:Process(out)*1.5
    local compd=comp:Process(out)
    m:Process(sr)
    return compd,compd

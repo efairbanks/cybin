@@ -1059,3 +1059,26 @@ Interp.__newindex=function(self,k,v)
       rawset(self,k,v)
    end
 end
+----------------------
+----------------------
+Allpass={}
+Allpass.__index=Allpass
+setmetatable(Allpass,{__call=function(cls,...) return cls.new(...) end})
+function Allpass.new(samps,coef)
+   local o={}
+   setmetatable(o,Allpass)
+   o.buf={}
+   for i=1,samps do o.buf[i]=0 end
+   o.buf=Interp(o.buf)
+   o.size=samps
+   o.coef=coef
+   o.index=0
+   return o
+end
+function Allpass:Process(input)
+   local output=input*self.coef+self.buf[self.index]
+   self.buf[self.index]=input+output*-self.coef
+   self.index=self.index+1
+   while self.index>self.size do self.index=self.index-self.size end
+   return output
+end
