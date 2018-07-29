@@ -784,7 +784,8 @@ function Pat:Normalize(func)
   return ret
 end
 function Pat:Degree2Pitch(scale,octaveLength)
-   if octaveLength==nil then octaveLength=12 end
+   scale = scale or {0,2,3,5,7,8,10}
+   octaveLength = octaveLength or 12
    local ret=Pat(self)
    local function helper(degree)
       local octave=math.floor(degree/#scale,1)
@@ -1078,6 +1079,29 @@ end
 function Allpass:Process(input)
    local output=input*self.coef+self.buf[self.index]
    self.buf[self.index]=input+output*-self.coef
+   self.index=self.index+1
+   while self.index>self.size do self.index=self.index-self.size end
+   return output
+end
+----------------------
+----------------------
+Comb={}
+Comb.__index=Comb
+setmetatable(Comb,{__call=function(cls,...) return cls.new(...) end})
+function Comb.new(samps,coef)
+   local o={}
+   setmetatable(o,Comb)
+   o.buf={}
+   for i=1,samps do o.buf[i]=0 end
+   o.buf=Interp(o.buf)
+   o.size=samps
+   o.coef=coef
+   o.index=0
+   return o
+end
+function Comb:Process(input)
+   self.buf[self.index]=input+self.buf[self.index]*self.coef
+   local output=self.buf[self.index]
    self.index=self.index+1
    while self.index>self.size do self.index=self.index-self.size end
    return output

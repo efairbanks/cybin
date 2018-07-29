@@ -1,0 +1,51 @@
+require 'cybin'
+b=Allpass(2143,0.95)
+c=Allpass(3254,0.95)
+d=Allpass(2354,0.95)
+s=Synth()
+bass=Synth()
+m=Metro()
+lfo=SinOsc();lfo.freq=2.354
+P=Pat
+_=P{}
+e={deg=0,lfoVal=0}
+kick=PolySampler(cybin.loadaudiofile('KICK.AIF'))
+snare=PolySampler(cybin.loadaudiofile('SNARE.AIF'))
+comp=Compressor(-25,3,0.01,0.3,10)
+hpass=Filter()
+hpass:SetType('highpass')
+hpass:SetFreq(400,48000)
+
+function __process(sr)
+   m:Process(sr)
+   e.lfoVal=lfo:Process(sr)
+   local out=s:Process(sr)
+   out=out+bass:Process(sr)*4
+   out=out+kick:Process(sr)*0.3
+   out=out+snare:Process(sr)*0.2
+   local verb=b:Process(out)
+   verb=c:Process(verb)
+   verb=d:Process(verb)
+   verb=hpass:Process(verb)
+   out=comp:Process(out+verb*0.7)
+   return out,out
+end
+
+proglen=7
+progoffset=5
+function play(t)
+   m:Pat(P.GenDup(1,proglen):Integrate():Reverse():Apply(function(x) return ((x-1)*progoffset)%7 end):Slow(proglen*2),function(x) e.deg=x end,1)
+   m:Pat((P{P{4,0,2,0}:P()}+e.deg):Degree2Pitch({0,2,4,5,7,9,11}):Fast(4),
+      function(x)
+	 s:PlayNote(60+x+e.lfoVal*(1/7))
+      end,1)
+   m:Pat((P{_,0,0,0}+e.deg):Degree2Pitch({0,2,4,5,7,9,11}):Fast(2):PitchCompress(8,30),
+      function(x)
+	 bass:PlayNote(24+x+e.lfoVal*(1/7))
+      end,1)
+   m:Pat(P{0,0},function(x) kick:Play{} end,1)
+   m:Pat(P{_,0},function(x) snare:Play{} end,1)
+   return 1
+end
+
+m:Interval('play')
