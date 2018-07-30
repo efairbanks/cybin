@@ -31,7 +31,7 @@ function __process(sr)
    return out,out
 end
 
-proglen=7
+proglen=4
 progoffset=5
 function play(t)
    m:Pat(P.GenDup(1,proglen):Integrate():Reverse():Apply(function(x) return ((x-1)*progoffset)%7 end):Slow(proglen*2),function(x) e.deg=x end,1)

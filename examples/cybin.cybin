@@ -1106,3 +1106,25 @@ function Comb:Process(input)
    while self.index>self.size do self.index=self.index-self.size end
    return output
 end
+----------------------
+----------------------
+Delay={}
+Delay.__index=Delay
+setmetatable(Delay,{__call=function(cls,...) return cls.new(...) end})
+function Delay.new(samps)
+   local o={}
+   setmetatable(o,Delay)
+   o.buf={}
+   for i=1,samps do o.buf[i]=0 end
+   o.buf=Interp(o.buf)
+   o.size=samps
+   o.index=0
+   return o
+end
+function Delay:Process(input)
+   local output=self.buf[self.index]
+   self.buf[self.index]=input
+   self.index=self.index+1
+   while self.index>self.size do self.index=self.index-self.size end
+   return output
+end
