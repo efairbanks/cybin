@@ -1,0 +1,48 @@
+require 'cybin'
+Reverb={}
+Reverb.__index=Reverb
+setmetatable(Reverb,{__call=function(cls,...) return cls.new(...) end})
+function Reverb.new(nodes,coef,spacing)
+   local o={}
+   setmetatable(o,Reverb)
+   o.coef=coef
+   o.lastSample=0
+   o.allpasses={}
+   for i=1,nodes do o.allpasses[i]=Allpass(math.floor(500*math.pow(spacing,i)),coef) end
+   return o
+end
+function Reverb:Process(input)
+   local out=input+self.lastSample*self.coef
+   for i=1,#self.allpasses do
+      self.allpasses[i].coef=self.coef
+      out=self.allpasses[i]:Process(out)
+   end
+   return out
+end
+
+s=Synth()
+m=Metro()
+r=Reverb(5,0.9,1.7)
+r2=Reverb(5,0.4,1.15)
+index=1
+p=((Pat.GenDup(1,18)*Pat{2,3,8}):Integrate()*7):PitchCompress(10,20)
+
+function play(t)
+   s:PlayNote(57+0+p:WrapAt(index)); index=index+1;
+   return 0.25
+end
+function __process(sr)
+   m:Process(sr)
+   local out=s:Process(sr)
+   local dry=out
+   out=r2:Process(out)
+   out=r:Process(out)
+   out=out+dry
+   out=out*0.5
+   --out=out*math.random()
+   --return math.random()
+   return out,out
+end
+
+m:Interval('play')
+
