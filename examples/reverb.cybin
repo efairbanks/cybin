@@ -37,10 +37,12 @@ function __process(sr)
    local dry=out
    out=r2:Process(out)
    out=r:Process(out)
-   out=out+dry
+   if math.floor(index/36)%2==1 then
+      out=out+dry
+   else
+      out=dry
+   end
    out=out*0.5
-   --out=out*math.random()
-   --return math.random()
    return out,out
 end
 
