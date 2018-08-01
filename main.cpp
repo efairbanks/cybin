@@ -21,6 +21,7 @@ struct{
   int samplerate;
   int channels;
   char* outfile;
+  char* loadfile;
 } Config;
 typedef struct{
   char COMMAND_BUFFER[1048576];
@@ -31,9 +32,10 @@ void parse_args(int argc, char** argv){
   Config.list_devices=false;
   Config.set_device=-1;
   Config.duration=10;
-  Config.samplerate=44100;
+  Config.samplerate=48000;
   Config.channels=2;
   Config.outfile="cybin.wav";
+  Config.loadfile=NULL;
   for(int i=1;i<argc;i++){
     char* currentArg=argv[i];
     if(strcmp("--offline",currentArg)==0){
@@ -59,7 +61,7 @@ void parse_args(int argc, char** argv){
       i++;currentArg=argv[i];
       Config.set_device=atoi(currentArg);
     } else {
-      Interpreter::LoadFile(currentArg);
+      Config.loadfile=currentArg;
     }
   }
 }
@@ -163,10 +165,11 @@ int main(int argc, char** argv){
   Interpreter::LoadFunction("setuniform3f",cybin_setuniform3f);
   Interpreter::LoadFunction("setuniform4f",cybin_setuniform4f);
   // --- Configure environment --- //
+  parse_args(argc,argv);
   if(Config.offline) {   // --- OFFLINE RENDERING ---- //
     Interpreter::LoadNumber("samplerate",Config.samplerate);
     Interpreter::LoadNumber("channels",Config.channels);
-    parse_args(argc,argv);
+    if(Config.loadfile!=NULL) Interpreter::LoadFile(Config.loadfile);
     printf("Rendering %f seconds of %d-channel audio to %s at %dHz",Config.duration,Config.channels,Config.outfile,Config.samplerate);
     int frames=int(Config.duration*Config.samplerate);
     float* buffer = (float*)malloc(frames*Config.channels*sizeof(float));
@@ -184,7 +187,7 @@ int main(int argc, char** argv){
     Audio::Init(__process,Config.set_device);
     Interpreter::LoadNumber("samplerate",Audio::samplerate);
     Interpreter::LoadNumber("channels",Audio::channels);
-    parse_args(argc,argv);
+    if(Config.loadfile!=NULL) Interpreter::LoadFile(Config.loadfile);
     if(Config.list_devices) {
       Audio::ListDevices();
       printf("cybin> "); // this is inelegant, we can do better.

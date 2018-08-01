@@ -1,0 +1,27 @@
+require 'cybin'
+P=Pat
+_=P{}
+kick=PolySampler('KICK.AIF')
+m=Metro()
+interval=1/2
+kickPats={
+   {P{0.1,_,P{8,4,2}}:Slow(3/4),function(v,t) kick:Play{speed=v,pitch=v/3} end,interval},
+   {P{1/2,_,_,1/4,_,_,1/8,_}:Slow(1),function(v,t) kick:Play{speed=v} end,interval},
+   {P.GenBjorkStructure(13,{7,4,2}):Replace(0,_):Slow(13/8),function(v,t) kick:Play{speed=0.5/v,pitch=v*0.5} end,interval}
+}
+patIndex=1
+
+function play(t)
+   m:Pat(P.GenBjorkStructure(13,{11,5}):Slow(13/4)+1,function(v,t) patIndex=v end,interval)
+   m:Pat(unpack(kickPats[patIndex]))
+   return interval
+end
+
+function __process(sr)
+   if m==nil then m=Metro() else m:Process() end
+   local out=kick:Process()
+   --out=out*0.1
+   return out,out
+end
+
+m:Interval('play')

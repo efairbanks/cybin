@@ -922,11 +922,11 @@ end
 PolySampler={}
 PolySampler.__index=PolySampler
 setmetatable(PolySampler, {__call = function (cls, ...) return cls.new(...) end,})
-function PolySampler.new(s)
+function PolySampler.new(sample)
   if type(sample)=='string' then sample=cybin.loadaudiofile(sample) end
   local o={}
   setmetatable(o,PolySampler)
-  o.sample=s
+  o.sample=sample
   o.voices={}
   return o
 end
