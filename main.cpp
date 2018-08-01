@@ -163,8 +163,10 @@ int main(int argc, char** argv){
   Interpreter::LoadFunction("setuniform3f",cybin_setuniform3f);
   Interpreter::LoadFunction("setuniform4f",cybin_setuniform4f);
   // --- Configure environment --- //
-  parse_args(argc,argv);
   if(Config.offline) {   // --- OFFLINE RENDERING ---- //
+    Interpreter::LoadNumber("samplerate",Config.samplerate);
+    Interpreter::LoadNumber("channels",Config.channels);
+    parse_args(argc,argv);
     printf("Rendering %f seconds of %d-channel audio to %s at %dHz",Config.duration,Config.channels,Config.outfile,Config.samplerate);
     int frames=int(Config.duration*Config.samplerate);
     float* buffer = (float*)malloc(frames*Config.channels*sizeof(float));
@@ -180,6 +182,9 @@ int main(int argc, char** argv){
   } else {        // --- REALTIME RENDERING --- //
     // --- Continue startup --- //
     Audio::Init(__process,Config.set_device);
+    Interpreter::LoadNumber("samplerate",Audio::samplerate);
+    Interpreter::LoadNumber("channels",Audio::channels);
+    parse_args(argc,argv);
     if(Config.list_devices) {
       Audio::ListDevices();
       printf("cybin> "); // this is inelegant, we can do better.

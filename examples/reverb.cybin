@@ -32,8 +32,8 @@ function play(t)
    return 0.25
 end
 function __process(sr)
-   m:Process(sr)
-   local out=s:Process(sr)
+   m:Process()
+   local out=s:Process()
    local dry=out
    out=r2:Process(out)
    out=r:Process(out)

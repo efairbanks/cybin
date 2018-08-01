@@ -12,6 +12,8 @@ class Audio{
   static unsigned long int _play_head;
   static unsigned long int _write_head;
   public:
+  static int samplerate;
+  static int channels;
   static void write_callback(struct SoundIoOutStream *_audio_oustream, int frame_count_min, int frame_count_max){
     const struct SoundIoChannelLayout *layout = &_audio_oustream->layout;
     float float_sample_rate = _audio_oustream->sample_rate;
@@ -62,6 +64,8 @@ class Audio{
     _audio_oustream->format = SoundIoFormatFloat32NE; _audio_oustream->write_callback = write_callback;
     if(soundio_outstream_open(_audio_oustream)||_audio_oustream->layout_error) exit(1);
     if(soundio_outstream_start(_audio_oustream)) exit(1);
+    samplerate=_audio_oustream->sample_rate;
+    channels=_audio_oustream->bytes_per_frame/_audio_oustream->bytes_per_sample;
   }
   static void Shutdown(){
     // --- LibSndIo Teardown --- //
@@ -105,4 +109,6 @@ SoundIoDevice* Audio::_audio_device;
 SoundIoOutStream* Audio::_audio_oustream;
 float* (*Audio::_audio_callback)(float,int);
 int Audio::_audio_lock;
+int Audio::samplerate;
+int Audio::channels;
 #endif

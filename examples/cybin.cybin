@@ -17,7 +17,8 @@ function SinOsc.new()
   return o
 end
 function SinOsc:Process(samplerate)
-  self.phase=self.phase+(math.pi*2*self.freq/samplerate)
+  local sr = samplerate or cybin.samplerate
+  self.phase=self.phase+(math.pi*2*self.freq/sr)
   return math.sin(self.phase)*self.amp;
 end
 ----------------------
@@ -53,7 +54,8 @@ function SawOsc.new()
   return o
 end
 function SawOsc:Process(samplerate)
-  self.phase=self.phase+self.freq/samplerate
+  local sr = samplerate or cybin.samplerate
+  self.phase=self.phase+self.freq/sr
   while self.phase>1 do self.phase=self.phase-1 end
   return (self.phase*2-1)*self.amp
 end
@@ -71,7 +73,8 @@ function TriOsc.new()
   return o
 end
 function TriOsc:Process(samplerate)
-  self.phase=self.phase+self.freq/samplerate
+  local sr = samplerate or cybin.samplerate
+  self.phase=self.phase+self.freq/sr
   while self.phase>1 do self.phase=self.phase-1 end
   return (math.abs(self.phase-0.5)*4-1)*self.amp
 end
@@ -91,10 +94,11 @@ function Line.new()
 end
 function Line:Process(samplerate)
   local output=0
+  local sr = samplerate or cybin.samplerate
   if self.delta>-1 then
     output=self.to*self.delta/self.duration + self.from*(self.duration-self.delta)/self.duration
-    self.delta=self.delta+1/samplerate
-    if self.delta>self.duration+1/samplerate then self.delta = -1 end
+    self.delta=self.delta+1/sr
+    if self.delta>self.duration+1/sr then self.delta = -1 end
   else
     output=self.to
   end
@@ -219,7 +223,8 @@ function Filter:SetType(filterType)
   self:CalcBiquad()
 end
 function Filter:SetFreq(freq,samplerate)
-  self.Fc=freq/samplerate
+  local sr = samplerate or cybin.samplerate
+  self.Fc=freq/sr
   self:CalcBiquad()
 end
 function Filter:SetQ(q)
@@ -254,7 +259,8 @@ function Voice:PlayNote(note)
   self.attack:Reset()
   self.release:Reset()
 end
-function Voice:Process(sr)
+function Voice:Process(samplerate)
+  local sr = samplerate or cybin.samplerate
   local env=self.attack:Process(sr)*self.release:Process(sr)
   local expEnv=math.pow(env,10)
   self.osc.width=Utils.scale(expEnv,0,1,0.1,0.5)
@@ -282,7 +288,8 @@ function Synth:PlayNote(note)
   self.voices[self.voiceIndex]:PlayNote(note)
   self.voiceIndex=(self.voiceIndex+1)%self.numVoices+1
 end
-function Synth:Process(sr)
+function Synth:Process(samplerate)
+  local sr = samplerate or cybin.samplerate
   local output=0
   for i=1,#(self.voices) do
     if self.voices[i].release.delta>-1 then output=output+self.voices[i]:Process(sr) end
@@ -302,7 +309,8 @@ function Metro.new()
   o.time=0
   return o
 end
-function Metro:Process(sr)
+function Metro:Process(samplerate)
+  local sr = samplerate or cybin.samplerate
   local rmindices={}
   local now=self.time
   for i=1,#self.events do
@@ -377,11 +385,13 @@ function Sampler.new(s)
   o.basenote=60
   return o
 end
-function Sampler:Note2Pitch(n,sr)
+function Sampler:Note2Pitch(n,samplerate)
+   local sr = samplerate or cybin.samplerate
    local scaler=math.pow(2,(n-self.basenote)/12)
    self.pitch=scaler
 end
-function Sampler:Process(sr)
+function Sampler:Process(samplerate)
+  local sr = samplerate or cybin.samplerate
   local out={}
   for i=1,self.sample.channels do out[i]=0 end
   if self.loop==false and self.sindex>self.sample.frames then
@@ -446,7 +456,8 @@ function Env.new(v,d)
   o.out=0
   return o
 end
-function Env:Process(sr)
+function Env:Process(samplerate)
+  local sr = samplerate or cybin.samplerate
   local i=1
   if self.delta==-1 then return self.out end
   if self.delta>=self.times[#self.times] then
@@ -896,7 +907,8 @@ function PolySamplerVoice.new(sample,params)
   o.sampler.sindex=o.start*o.sampler.sample.frames
   return o
 end
-function PolySamplerVoice:Process(sr)
+function PolySamplerVoice:Process(samplerate)
+  local sr = samplerate or cybin.samplerate
   if self.env.delta<0 then
     local out={}
     for i=1,self.sampler.sample.channels do out[i]=0 end
@@ -941,7 +953,8 @@ function PolySampler:Play(p)
   end
   table.insert(self.voices,voice)
 end
-function PolySampler:Process(sr)
+function PolySampler:Process(samplerate)
+  local sr = samplerate or cybin.samplerate
   local out={}
   for i=1,self.sample.channels do out[i]=0 end
   for i=#self.voices,1,-1 do
@@ -967,7 +980,7 @@ setmetatable(Compressor, {__call = function (cls, ...) return cls.new(...) end,}
 function Compressor.new(threshold,ratio,attack,release,makeup,samplerate)
    local o={}
    setmetatable(o,Compressor)
-   o.samplerate=samplerate or 48000
+   o.samplerate=samplerate or cybin.samplerate
    o.threshold=threshold or -10
    o.ratio=ratio or 2
    o.attack=attack or 0.015
