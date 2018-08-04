@@ -711,6 +711,12 @@ function Pat:Derive()
 end
 function Pat:QueryEvents(a,b,c)
   if a>b then local temp=b; b=a; a=temp; end
+  --
+  a=a+self.offset
+  b=b+self.offset
+  if a<0 then a=0 end
+  if b<=0 then return {} end
+  --
   c=c/self.cycles
   a=a*c;b=b*c
   local out={}
@@ -749,8 +755,8 @@ function Pat:QueryEvents(a,b,c)
     end
   end
   for i=1,#out do
-    out[i].start=out[i].start/c
-    out[i].stop=out[i].stop/c
+    out[i].start=out[i].start/c-self.offset
+    out[i].stop=out[i].stop/c-self.offset
   end
   return out
 end
@@ -768,6 +774,11 @@ function Pat:Fast(x)
   local ret=Pat(self)
   ret.cycles=1/x
   return ret
+end
+function Pat:Offset(x)
+   local ret=Pat(self)
+   ret.offset=x
+   return ret
 end
 function Pat:Apply(f)
   for i=1,#self.t do
