@@ -337,8 +337,8 @@ function Metro:Pat(pat,handler,interval)
   end
   self:Events(events)
 end
-function Metro:Event(start,func)
-  table.insert(self.events,{start=start,func=func})
+function Metro:Event(start,func,stop)
+  table.insert(self.events,{start=start,func=func,stop=stop})
 end
 function Metro:Events(e)
   for i=1,#e do
@@ -429,9 +429,16 @@ function Sampler:GetChannels(i)
   while i<1 do i=i+self.sample.frames end
   if i==0 then i=1 end
   local out={}
+  ---
+  local intIndex,fracIndex=math.modf(i)
+  local intNextIndex=intIndex+1
+  if self.pitch<0 then intNextIndex=intIndex-1 end
   for j=1,self.sample.channels do
-    out[j]=self.sample[math.floor(i-1)*self.sample.channels+j]
-    if out[j]==nil then out[j]=0 end
+     local currentSample=self.sample[intIndex*self.sample.channels+j-1] or 0
+     local nextSample=self.sample[intNextIndex*self.sample.channels+j-1] or currentSample
+     out[j]=currentSample*(1-fracIndex)+nextSample*fracIndex
+     -- simplified version doesn't work even though mathematically equivalent?????
+     --out[j]=currentSample-(currentSample+nextSample)*fracIndex
   end
   return out
 end
@@ -989,21 +996,22 @@ function Compressor.new(threshold,ratio,attack,release,makeup,samplerate)
    o.lsat=1
    return o
 end
-function Compressor:Process(input)
+function Compressor:Process(carrier,modulator)
+   if modulator==nil then modulator=carrier end
    local function lin2db(x) return math.log10(x)*20 end
    local function db2lin(x) return math.pow(10,x/20) end
    local function rectify(x)
       if x>=0 then return x else return 0 end
    end
-   local dBaboveThreshold=rectify(lin2db(math.abs(input))-self.threshold)
+   local dBaboveThreshold=rectify(lin2db(math.abs(modulator))-self.threshold)
    local linAboveThreshold=db2lin(dBaboveThreshold)
    local coef=1/(self.release*self.samplerate)
    if linAboveThreshold>self.lsat then coef=1/(self.attack*self.samplerate) end
    self.lsat=math.abs(linAboveThreshold)*coef+self.lsat*(1-coef)
    dBaboveThreshold=lin2db(self.lsat)
-   local dBin=lin2db(math.abs(input))
+   local dBin=lin2db(math.abs(carrier))
    local signIn=1
-   if input<0 then signIn=-1 end
+   if carrier<0 then signIn=-1 end
    return db2lin(dBin-dBaboveThreshold+dBaboveThreshold/self.ratio)*db2lin(self.makeup)*signIn
 end
 ----------------------
@@ -1018,34 +1026,34 @@ function Interp.new(t)
    return o
 end
 function Interp:Write(k,v)
-   if self.lastIndex==nil or self.lastIndex==k then
+   if self.lastWriteIndex==nil or self.lastWriteIndex==k then
       k=math.floor(k)
       while k<=0 do k=k+#self.t end
       while k>#self.t do k=k-#self.t end
       self.t[k]=v
-      self.lastIndex=k
+      self.lastWriteIndex=k
    else
-      local fwdDistance=k-self.lastIndex
+      local fwdDistance=k-self.lastWriteIndex
       while fwdDistance<0 do fwdDistance=fwdDistance+#self.t end
       while fwdDistance>#self.t do fwdDistance=fwdDistance-#self.t end
-      local bckDistance=self.lastIndex-k
+      local bckDistance=self.lastWriteIndex-k
       while bckDistance<0 do bckDistance=bckDistance+#self.t end
       while bckDistance>#self.t do bckDistance=bckDistance-#self.t end
-      local from=self.t[self.lastIndex]
+      local from=self.t[self.lastWriteIndex]
       local to=v
       if fwdDistance<bckDistance then
 	 for i=0,fwdDistance do
 	    local interp=i/fwdDistance
-	    self.t[self.lastIndex]=from*(1-interp)+to*interp
-	    if i~=fwdDistance then self.lastIndex=self.lastIndex+1 end
-	    if self.lastIndex>#self.t then self.lastIndex=self.lastIndex-#self.t end
+	    self.t[self.lastWriteIndex]=from*(1-interp)+to*interp
+	    if i~=fwdDistance then self.lastWriteIndex=self.lastWriteIndex+1 end
+	    if self.lastWriteIndex>#self.t then self.lastWriteIndex=self.lastWriteIndex-#self.t end
 	 end
       else
 	 for i=0,bckDistance do
 	    local interp=i/bckDistance
-	    self.t[self.lastIndex]=from*(1-interp)+to*interp
-	    if i~=bckDistance then self.lastIndex=self.lastIndex-1 end
-	    if self.lastIndex<1 then self.lastIndex=self.lastIndex+#self.t end
+	    self.t[self.lastWriteIndex]=from*(1-interp)+to*interp
+	    if i~=bckDistance then self.lastWriteIndex=self.lastWriteIndex-1 end
+	    if self.lastWriteIndex<1 then self.lastWriteIndex=self.lastWriteIndex+#self.t end
 	 end
       end
    end
@@ -1140,4 +1148,26 @@ function Delay:Process(input)
    self.index=self.index+1
    while self.index>self.size do self.index=self.index-self.size end
    return output
+end
+----------------------
+----------------------
+Reverb={}
+Reverb.__index=Reverb
+setmetatable(Reverb,{__call=function(cls,...) return cls.new(...) end})
+function Reverb.new(nodes,coef,spacing)
+   local o={}
+   setmetatable(o,Reverb)
+   o.coef=coef
+   o.lastSample=0
+   o.allpasses={}
+   for i=1,nodes do o.allpasses[i]=Allpass(math.floor(500*math.pow(spacing,i)),coef) end
+   return o
+end
+function Reverb:Process(input)
+   local out=input+self.lastSample*self.coef
+   for i=1,#self.allpasses do
+      self.allpasses[i].coef=self.coef
+      out=self.allpasses[i]:Process(out)
+   end
+   return out
 end
