@@ -1,0 +1,28 @@
+require 'cybin'
+P=Pat
+_=P{}
+reverb=Reverb(5,0.95,1.2)
+synth=Poly(FMVoice)
+m=Metro()
+e={degree=0}
+
+function __process(sr)
+   m:Process()
+   local out=synth:Process()
+   out=reverb:Process(out)
+   return out,out
+end
+
+function play(t)
+   m:Pat(P{0,3,5,4}:Slow(4),
+	 function(v,t)
+	    e.degree=v
+	 end,1)
+   m:Pat((P{7,0,3,0}:Fast(2)+P{e.degree}:Degree2Pitch()):PitchCompress(83,97),
+	 function(v,t)
+	    synth:Play{note=v,modCoef=5/4,modAmp=2000,env=Env({0,1,0},{3/1000,1/20})}
+	 end,1)
+   return 1
+end
+
+m:Interval('play')

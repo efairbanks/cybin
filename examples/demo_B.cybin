@@ -2,8 +2,8 @@ require 'cybin'
 b=Allpass(2143,0.95)
 c=Allpass(3254,0.95)
 d=Allpass(2354,0.95)
-s=Synth()
-bass=Synth()
+s=SawSynth()
+bass=SawSynth()
 m=Metro()
 lfo=SinOsc();lfo.freq=2.354
 P=Pat
@@ -37,11 +37,11 @@ function play(t)
    m:Pat(P.GenDup(1,proglen):Integrate():Reverse():Apply(function(x) return ((x-1)*progoffset)%7 end):Slow(proglen*2),function(x) e.deg=x end,1)
    m:Pat((P{P{4,0,2,0}:P()}+e.deg):Degree2Pitch({0,2,4,5,7,9,11}):Fast(4),
       function(x)
-	 s:PlayNote(60+x+e.lfoVal*(1/7))
+	 s:Play{note=60+x+e.lfoVal*(1/7)}
       end,1)
    m:Pat((P{_,0,0,0}+e.deg):Degree2Pitch({0,2,4,5,7,9,11}):Fast(2):PitchCompress(8,30),
       function(x)
-	 bass:PlayNote(24+x+e.lfoVal*(1/7))
+	 bass:Play{note=24+x+e.lfoVal*(1/7)}
       end,1)
    m:Pat(P{0,0},function(x) kick:Play{} end,1)
    m:Pat(P{_,0},function(x) snare:Play{} end,1)

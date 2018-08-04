@@ -2,7 +2,7 @@ require 'cybin'
 require 'table-extended'
 P=Pat
 _=P{}
-s=Synth()
+s=SawSynth()
 m=Metro()
 kick=PolySampler(cybin.loadaudiofile('KICK.AIF'))
 snare=PolySampler(cybin.loadaudiofile('SNARE.AIF'))
@@ -21,7 +21,7 @@ function __process(sr)
    out=out*0.5
    out=hpass:Process(out)*1.5
    local bd=kick:Process()
-   local compd=comp:Process(math.random()-0.5,bd)
+   local compd=comp:Process(out,bd)
    compd=compd+bd*0
    m:Process(sr)
    return compd,bd
@@ -32,7 +32,7 @@ function play(t)
    m:Pat(P{_,1},function(x) snare:Play{} end,1)
    m:Pat(P{_,1}:Fast(2),function(x) hat:Play{pitch=3,speed=1} end,1)
    m:Pat(P{0,0,3,P{2,1.5,1,0.5}}:Slow(8),function(x) env.bassNote=x end,1)
-   m:Pat(P.GenBjork(11,17):Slow(17/4):Replace(0,_),function(x) s:PlayNote(env.bassNote+32) end,1)
+   m:Pat(P.GenBjork(11,17):Slow(17/4):Replace(0,_),function(x) s:Play{note=env.bassNote+32} end,1)
    return 1
 end
 

@@ -239,12 +239,12 @@ function Filter:Process(input)
 end
 ----------------------
 ----------------------
-Voice={}
-Voice.__index=Voice
-setmetatable(Voice, {__call = function (cls, ...) return cls.new(...) end,})
-function Voice.new()
+SawSynthVoice={}
+SawSynthVoice.__index=SawSynthVoice
+setmetatable(SawSynthVoice, {__call = function (cls, ...) return cls.new(...) end,})
+function SawSynthVoice.new()
   local o={}
-  setmetatable(o,Voice)
+  setmetatable(o,SawSynthVoice)
   o.osc=PulseOsc.new()
   o.release=Line.new()
   o.attack=Line.new()
@@ -254,12 +254,13 @@ function Voice.new()
   o.filter=Filter.new("lowpass")
   return o
 end
-function Voice:PlayNote(note)
+function SawSynthVoice:Play(p)
+  local note=p.note or 60
   self.osc.freq=440*math.pow(2,(note-69)/12);
   self.attack:Reset()
   self.release:Reset()
 end
-function Voice:Process(samplerate)
+function SawSynthVoice:Process(samplerate)
   local sr = samplerate or cybin.samplerate
   local env=self.attack:Process(sr)*self.release:Process(sr)
   local expEnv=math.pow(env,10)
@@ -269,26 +270,26 @@ function Voice:Process(samplerate)
 end
 ----------------------
 ----------------------
-Synth={}
-Synth.__index=Synth
-setmetatable(Synth, {__call = function (cls, ...) return cls.new(...) end,})
-function Synth.new()
+SawSynth={}
+SawSynth.__index=SawSynth
+setmetatable(SawSynth, {__call = function (cls, ...) return cls.new(...) end,})
+function SawSynth.new()
   local o={}
-  setmetatable(o,Synth)
+  setmetatable(o,SawSynth)
   o.numVoices=50
   o.voices={}
   o.voiceIndex=1
   o.filter=Filter.new("lowshelf")
   for i=1,o.numVoices do
-    table.insert(o.voices,Voice.new())
+    table.insert(o.voices,SawSynthVoice.new())
   end
   return o
 end
-function Synth:PlayNote(note)
-  self.voices[self.voiceIndex]:PlayNote(note)
+function SawSynth:Play(note)
+  self.voices[self.voiceIndex]:Play(note)
   self.voiceIndex=(self.voiceIndex+1)%self.numVoices+1
 end
-function Synth:Process(samplerate)
+function SawSynth:Process(samplerate)
   local sr = samplerate or cybin.samplerate
   local output=0
   for i=1,#(self.voices) do
@@ -463,6 +464,9 @@ function Env.new(v,d)
   o.out=0
   return o
 end
+function Env:Reset()
+   self.delta=0
+end
 function Env:Process(samplerate)
   local sr = samplerate or cybin.samplerate
   local i=1
@@ -505,6 +509,7 @@ function Pat.new(t)
   setmetatable(o,Pat)
   o.t=t.t or {}
   o.cycles=t.cycles or 1
+  o.offset=t.offset or 0
   o.parallel=t.parallel or false
   for i=1,#t do
     if type(t[i])=='table' then
@@ -1170,4 +1175,75 @@ function Reverb:Process(input)
       out=self.allpasses[i]:Process(out)
    end
    return out
+end
+----------------------
+----------------------
+Poly={}
+Poly.__index=Poly
+setmetatable(Poly,{__call=function(cls,...) return cls.new(...) end})
+function Poly.new(voice)
+   local o={}
+   setmetatable(o,Poly)
+   o.voice=voice
+   o.voices={}
+   return o
+end
+function Poly:Play(p)
+   local voice=self.voice(p)
+   table.insert(self.voices,voice)
+end
+function Poly:Set(p)
+   for i=1,#self.voices do
+      for k,v in pairs(p) do
+	 self:SetVoice(self.voices[i],k,v)
+      end
+   end
+end
+function Poly:SetVoice(voice,key,value)
+   if type(voice[key])=='function' then
+      voice[key](voice,value)
+   else
+      voice[key]=value
+   end
+end
+function Poly:Process(samplerate)
+   local out=0
+   for i=#self.voices,1,-1 do
+      if self.voices[i].free~=nil then
+	 table.remove(self.voices,i)
+      else
+	 out=out+self.voices[i]:Process(samplerate)
+      end
+   end
+   return out
+end
+----------------------
+----------------------
+FMVoice={}
+FMVoice.__index=FMVoice
+setmetatable(FMVoice,{__call=function(cls,...) return cls.new(...) end})
+function FMVoice.new(p)
+   local o={}
+   setmetatable(o,FMVoice)
+   o.note=p.note or 60
+   o.env=p.env or Env({0,1,0},{0.01,0.3})
+   o.env:Reset()
+   o.modCoef=p.modCoef or 3
+   o.modAmp=p.modAmp or 300
+   o.modShape=p.modShape or 1
+   o.carrierShape=p.carrierShape or 1
+   o.amp=p.amp or 0.1
+   o.carrier=SinOsc()
+   o.modulator=SinOsc()
+   o.carrierBaseFreq=440*math.pow(2,(o.note-69)/12)
+   o.carrier.freq=o.carrierBaseFreq
+   o.modulator.freq=o.carrier.freq*o.modCoef
+   return o
+end
+function FMVoice:Process(samplerate)
+   local sr=samplerate or cybin.samplerate
+   local env=self.env:Process(sr)
+   if self.env.delta==-1 then self.free=true end
+   self.carrier.freq=self.carrierBaseFreq+math.atan(self.modulator:Process(sr)*self.modShape)*self.modAmp*env
+   return math.atan(self.carrier:Process(sr)*self.carrierShape)*env
 end
