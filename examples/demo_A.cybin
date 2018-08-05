@@ -28,9 +28,7 @@ function __process(sr)
 end
 
 function play(t)
-   print()
-   print(t)
-   m:Pat(P{1}:Fast(2),function(x,start,stop) kick:Play{pitch=0.5,speed=2}; print(start,stop) end,t,t+1)
+   m:Pat(P{1}:Fast(2),function(x,start,stop) kick:Play{pitch=0.5,speed=2} end,t,t+1)
    m:Pat(P{_,1},function(x) snare:Play{} end,t,t+1)
    m:Pat(P{_,1}:Fast(2),function(x) hat:Play{pitch=3,speed=1} end,t,t+1)
    m:Pat(P{0,0,3,P{2,1.5,1,0.5}}:Slow(8),function(x) env.bassNote=x end,t,t+1)

@@ -8,7 +8,7 @@ m=Metro()
 lfo=SinOsc();lfo.freq=2.354
 P=Pat
 _=P{}
-e={deg=0,lfoVal=0}
+e={deg=1,lfoVal=0}
 kick=PolySampler(cybin.loadaudiofile('KICK.AIF'))
 snare=PolySampler(cybin.loadaudiofile('SNARE.AIF'))
 comp=Compressor(-25,3,0.01,0.3,10)
@@ -34,7 +34,8 @@ end
 proglen=4
 progoffset=5
 function play(t)
-   m:Pat(P.GenDup(1,proglen):Integrate():Reverse():Apply(function(x) return ((x-1)*progoffset)%7 end):Slow(proglen*2),function(x) e.deg=x end,t,t+1)
+   local prog=P.GenDup(1,proglen):Integrate():Reverse():Apply(function(x) return ((x-1)*progoffset)%7 end)
+   e.deg=Pat.WrapAt(prog,math.floor(t/2+1))
    m:Pat((P{P{4,0,2,0}:P()}+e.deg):Degree2Pitch({0,2,4,5,7,9,11}):Fast(4),
       function(x)
 	 s:Play{note=60+x+e.lfoVal*(1/7)}
@@ -45,7 +46,9 @@ function play(t)
       end,t,t+1)
    m:Pat(P{0,0},function(x) kick:Play{} end,t,t+1)
    m:Pat(P{_,0},function(x) snare:Play{} end,t,t+1)
+
    return 1
 end
 
 m:Interval('play')
+

@@ -744,13 +744,13 @@ function Pat:QueryEvents(a,b,c)
       end
     end
   else
-    while time<b do
+    while time<b-epsilon do
       local e=self.t[((i+eventOffset)%#self.t)+1]
       local start=time
       local stop=time+step
       if type(e)=='table' then
         -- ...due to rounding errors
-        local events=e:QueryEvents(start,stop,1/step-epsilon)
+        local events=e:QueryEvents(start,stop,1/step)
         for i=1,#events do table.insert(out,events[i]) end
       else
         table.insert(out,{start=start,stop=stop,value=e})

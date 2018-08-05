@@ -26,14 +26,12 @@ kickPats={
 function play(t)
    m:Pat(P.GenBjorkStructure(13,{11,5}):Slow(13/4)+1,function(v,t) patIndex=v end,t,t+interval)
    m:Pat(kickPats[patIndex][1],kickPats[patIndex][2],t,t+interval)
-   print(#kick.voices)
    return interval
 end
 function __process(sr)
    if m==nil then m=Metro() else m:Process() end
    local out=kick:Process()
    out=out+glass:Process()
-   --out=out*0.1
    return out,out
 end
 
