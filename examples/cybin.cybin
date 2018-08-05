@@ -302,12 +302,13 @@ end
 Metro={}
 Metro.__index=Metro
 setmetatable(Metro, {__call = function (cls, ...) return cls.new(...) end,})
-function Metro.new()
+function Metro.new(cps)
   local o={}
   setmetatable(o,Metro)
   o.events={}
   o.pats={}
   o.time=0
+  o.cps=cps or 1
   return o
 end
 function Metro:Process(samplerate)
@@ -316,29 +317,29 @@ function Metro:Process(samplerate)
   local now=self.time
   for i=1,#self.events do
     if self.time>self.events[i].start then
-      self.events[i].func(self.time)
+       self.events[i].func(self.events[i].start,self.events[i].stop)
       table.insert(rmindices,i)
     end
   end
   for i=1,#rmindices do
     table.remove(self.events,rmindices[#rmindices-i+1])
   end
-  self.time=self.time+1/sr
+  self.time=self.time+self.cps/sr
   return now
 end
-function Metro:Pat(pat,handler,interval)
+function Metro:Pat(pat,handler,start,stop)
   local function close(value)
-    return function(time)
-      handler(value,time)
+    return function(start,stop)
+      handler(value,start,stop)
     end
   end
-  local events=pat:QueryEvents(self.time,self.time+interval,1)
+  local events=pat:QueryEvents(start,stop,1)
   for i=1,#events do
     events[i].func=close(events[i].value)
   end
   self:Events(events)
 end
-function Metro:Event(start,func,stop)
+function Metro:Event(func,start,stop)
   table.insert(self.events,{start=start,func=func,stop=stop})
 end
 function Metro:Events(e)
@@ -347,21 +348,25 @@ function Metro:Events(e)
   end
 end
 function Metro:Interval(func)
-  local callback=nil
-  if type(func)=='function' then
-    callback=function(time)
-      local nextTime=self.time+func(self.time)
-      self:Event(nextTime,callback)
-    end
-  elseif type(func)=='string' and _G[func]~=nil then
-    callback=function(time)
-      if _G[func]~=nil then
-        local nextTime=self.time+_G[func](self.time)
-        self:Event(nextTime,callback)
+   local callback=nil
+   if type(func)=='function' then
+      callback=function(start)
+	 start = start or self.time
+	 local interval=func(start)
+	 local nextTime=start+interval
+	 self:Event(callback,nextTime,nextTime+interval)
       end
-    end
-  end
-  if callback~=nil then callback() end
+   elseif type(func)=='string' and _G[func]~=nil then
+      callback=function(start)
+	 if _G[func]~=nil then
+	    start = start or self.time
+	    local interval=_G[func](start)
+	    local nextTime=start+interval
+	    self:Event(callback,nextTime,nextTime+interval)
+	 end
+      end
+   end
+   if callback~=nil then callback() end
 end
 ----------------------
 ----------------------
@@ -725,7 +730,7 @@ function Pat:QueryEvents(a,b,c)
   local i=0
   local eventOffset=math.ceil(a/step)
   local time=eventOffset*step
-  local epsilon=0.000000001 --ensure we don't accidentally get the beginning of the next pat
+  local epsilon=0.00000001 --ensure we don't accidentally get the beginning of the next pat
   if self.parallel then
     for i=1,#self.t do
       local e=self.t[i]
@@ -919,12 +924,8 @@ setmetatable(PolySamplerVoice, {__call = function (cls, ...) return cls.new(...)
 function PolySamplerVoice.new(sample,params)
   local o={}
   setmetatable(o,PolySamplerVoice)
-  o.envValues={0,1,0}
-  o.envDurations={0.005,1}
   o.start=0
   for k,v in pairs(params) do o[k]=v end
-  o.env=Env(o.envValues,o.envDurations)
-  o.env.delta=0
   o.sampler=Sampler(sample)
   o.sampler.loop=false
   o.sampler.sindex=o.start*o.sampler.sample.frames
@@ -932,13 +933,10 @@ function PolySamplerVoice.new(sample,params)
 end
 function PolySamplerVoice:Process(samplerate)
   local sr = samplerate or cybin.samplerate
-  if self.env.delta<0 then
-    local out={}
-    for i=1,self.sampler.sample.channels do out[i]=0 end
-    return unpack(out)
-  else
-    return self.env:Process(sr)*self.sampler:Process(sr)
+  if self.sampler.loop==false and self.sampler.sindex>self.sampler.sample.frames then
+     self.free=true
   end
+  return self.sampler:Process(sr)
 end
 ----------------------
 ----------------------
@@ -981,7 +979,7 @@ function PolySampler:Process(samplerate)
   local out={}
   for i=1,self.sample.channels do out[i]=0 end
   for i=#self.voices,1,-1 do
-    if self.voices[i].env.delta<0 then table.remove(self.voices,i) end
+    if self.voices[i].free==true then table.remove(self.voices,i) end
   end
   for i=1,#self.voices do
     local val={self.voices[i]:Process(sr)};

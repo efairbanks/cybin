@@ -8,24 +8,25 @@ interval=1/2
 patIndex=1
 
 kickPats={
-   {P{0.1,_,P{8,4,2}}:Slow(3/4),
+   {P{1,_,P{8,4,2}}:Slow(3/4),
     function(v,t)
        kick:Play{speed=v,pitch=v/3}
-    end,interval},
-   {P{1/2,_,_,1/4,_,_,1/8,_}:Slow(1),
+    end},
+   {P{1,_,_,1/2,_,_,1/4,_}:Slow(1),
     function(v,t)
        kick:Play{speed=v}
-       for k,v2 in pairs({1,5/4}) do glass:Play{pitch=v*4*v2,speed=1} end
-    end,interval},
+       for k,v2 in pairs({1,5/4}) do glass:Play{pitch=v*4*v2,speed=4} end
+    end},
    {P.GenBjorkStructure(13,{7,4,2}):Replace(0,_):Slow(13/8),
     function(v,t)
        kick:Play{speed=0.5/v,pitch=v*0.5}
-    end,interval}
+    end}
 }
 
 function play(t)
-   m:Pat(P.GenBjorkStructure(13,{11,5}):Slow(13/4)+1,function(v,t) patIndex=v end,interval)
-   m:Pat(unpack(kickPats[patIndex]))
+   m:Pat(P.GenBjorkStructure(13,{11,5}):Slow(13/4)+1,function(v,t) patIndex=v end,t,t+interval)
+   m:Pat(kickPats[patIndex][1],kickPats[patIndex][2],t,t+interval)
+   print(#kick.voices)
    return interval
 end
 function __process(sr)

@@ -20,15 +20,16 @@ end
 
 function play(t)
    m:Pat(P{0}:Fast(2),
-	 function(v,t) kick:Play{} end,1)
+	 function(v,t) kick:Play{pitch=0.8} end,t,t+1)
    m:Pat(P{0,3,5,4}:Slow(4),
 	 function(v,t)
 	    e.degree=v
-	 end,1)
-   m:Pat((P{7,0,3,0}:Fast(1.5)+P{e.degree}:Degree2Pitch()):PitchCompress(83,97),
+	 end,t,t+1)
+   m:Pat(P{e.degree}:Fast(3):Degree2Pitch():PitchCompress(30,70),function(v,t) synth:Play{note=v,modShape=100,modAmp=300} end,t,t+1)
+   m:Pat((P{7,0,3,0}:Fast(6)+P{e.degree}:Degree2Pitch()):PitchCompress(83,97),
 	 function(v,t)
-	    synth:Play{note=v,modCoef=5/4,modAmp=2000,env=Env({0,1,0},{3/1000,1/20})}
-	 end,1)
+	    synth:Play{note=v,modCoef=5/4,modAmp=2000,env=Env({0,0.2,0},{3/1000,1/20})}
+	 end,t,t+1)
    return 1
 end
 
