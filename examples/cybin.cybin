@@ -731,7 +731,6 @@ function Pat:QueryEvents(a,b,c)
   local eventOffset=math.floor(a*#self.t+0.5)
   local startTime=eventOffset/#self.t
   local numEvents=math.floor(span*#self.t+0.5)
-  print(numEvents)
   if self.parallel~=true then
      while i<numEvents do
 	local e=self.t[((i+eventOffset)%#self.t)+1]
