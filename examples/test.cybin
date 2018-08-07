@@ -1,0 +1,16 @@
+require 'cybin'
+require 'table-extended'
+m=Metro()
+m.cps=2
+synth=SawSynth()
+span=10
+function play(t)
+   m:Pat(Pat{Pat{5,6,7}:Slow(3),Pat{10,11,12,13,14}:Slow(5),Pat{0,1,2,3,4,5,6}:Slow(7),3},function(x) synth:Play{note=x+60} end,t,t+span)
+   return span
+end
+m:Interval('play')
+function __process(sr)
+   m:Process()
+   local out=synth:Process()
+   return out,out
+end

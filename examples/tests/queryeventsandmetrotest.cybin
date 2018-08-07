@@ -1,7 +1,7 @@
 require 'cybin'
 require 'table-extended'
 m=Metro()
-m.cps=10
+m.cps=100
 synth=SawSynth()
 inc=0
 currentPat=Pat{}

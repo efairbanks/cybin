@@ -728,22 +728,22 @@ function Pat:QueryEvents(a,b,c)
   local span=b-a
   local step=1/#self.t
   local i=0
-  local eventOffset=math.ceil(a*#self.t)
-  local time=eventOffset/#self.t
-  local epsilon=0.00000000 --ensure we don't accidentally get the beginning of the next pat
+  local eventOffset=math.floor(a*#self.t+0.5)
+  local startTime=eventOffset/#self.t
+  local numEvents=math.floor(span*#self.t+0.5)
+  print(numEvents)
   if self.parallel~=true then
-     while time<b-epsilon do
+     while i<numEvents do
 	local e=self.t[((i+eventOffset)%#self.t)+1]
-	local start=time
-	local stop=time+step
+	local start=startTime+(i/#self.t)
+	local stop=startTime+((i+1)/#self.t)
 	if type(e)=='table' then
-	   local events=e:QueryEvents(start,stop,1/step)
+	   local events=e:QueryEvents(start,stop,#self.t)
 	   for i=1,#events do table.insert(out,events[i]) end
 	else
 	   table.insert(out,{start=start,stop=stop,value=e})
 	end
 	i=i+1
-	time=time+step
      end
   else
      for i=1,#self.t do
