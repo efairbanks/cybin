@@ -728,36 +728,35 @@ function Pat:QueryEvents(a,b,c)
   local span=b-a
   local step=1/#self.t
   local i=0
-  local eventOffset=math.ceil(a/step)
-  local time=eventOffset*step
-  local epsilon=0.000000001 --ensure we don't accidentally get the beginning of the next pat
-  if self.parallel then
-    for i=1,#self.t do
-      local e=self.t[i]
-      local start=a
-      local stop=b
-      if type(e)=='table' then
-        local events=e:QueryEvents(start,stop,1)
-        for i=1,#events do table.insert(out,events[i]) end
-      else
-        table.insert(out,{start=start,stop=stop,value=e})
-      end
-    end
+  local eventOffset=math.ceil(a*#self.t)
+  local time=eventOffset/#self.t
+  local epsilon=0.00000000 --ensure we don't accidentally get the beginning of the next pat
+  if self.parallel~=true then
+     while time<b-epsilon do
+	local e=self.t[((i+eventOffset)%#self.t)+1]
+	local start=time
+	local stop=time+step
+	if type(e)=='table' then
+	   local events=e:QueryEvents(start,stop,1/step)
+	   for i=1,#events do table.insert(out,events[i]) end
+	else
+	   table.insert(out,{start=start,stop=stop,value=e})
+	end
+	i=i+1
+	time=time+step
+     end
   else
-    while time<b-epsilon do
-      local e=self.t[((i+eventOffset)%#self.t)+1]
-      local start=time
-      local stop=time+step
-      if type(e)=='table' then
-        -- ...due to rounding errors
-        local events=e:QueryEvents(start,stop,1/step)
-        for i=1,#events do table.insert(out,events[i]) end
-      else
-        table.insert(out,{start=start,stop=stop,value=e})
-      end
-      i=i+1
-      time=time+step
-    end
+     for i=1,#self.t do
+	local e=self.t[i]
+	local start=a
+	local stop=b
+	if type(e)=='table' then
+	   local events=e:QueryEvents(start,stop,1)
+	   for i=1,#events do table.insert(out,events[i]) end
+	else
+	   table.insert(out,{start=start,stop=stop,value=e})
+	end
+     end
   end
   for i=1,#out do
     out[i].start=out[i].start/c-self.offset

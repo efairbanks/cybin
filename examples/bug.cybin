@@ -1,0 +1,17 @@
+require 'cybin'
+require 'table-extended'
+m=Metro()
+m.cps=10
+synth=SawSynth()
+inc=0
+currentPat=Pat{}
+slowAmount=9
+--slowAmount=5
+function play(t)
+   currentPat=Pat{Pat{1,2,3,4,5,6,7,8,9}:Slow(slowAmount)}
+   table.printr(currentPat:QueryEvents(t,t+1,1))
+   m:Pat(currentPat,function(x,s,e) if inc~=math.floor(m.time+0.5) then m=Metro(); end; inc=inc+1; synth:Play{note=60+x} end,t,t+1)
+	 return 1
+end
+m:Interval('play')
+function __process(sr) m:Process(); return synth:Process()*4 end
