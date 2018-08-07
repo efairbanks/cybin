@@ -316,7 +316,7 @@ function Metro:Process(samplerate)
   local rmindices={}
   local now=self.time
   for i=1,#self.events do
-    if self.time>self.events[i].start then
+    if self.time>=self.events[i].start then
        self.events[i].func(self.events[i].start,self.events[i].stop)
       table.insert(rmindices,i)
     end
@@ -340,7 +340,7 @@ function Metro:Pat(pat,handler,start,stop)
   self:Events(events)
 end
 function Metro:Event(func,start,stop)
-  table.insert(self.events,{start=start,func=func,stop=stop})
+  table.insert(self.events,{func=func,start=start,stop=stop})
 end
 function Metro:Events(e)
   for i=1,#e do
@@ -350,17 +350,17 @@ end
 function Metro:Interval(func)
    local callback=nil
    if type(func)=='function' then
-      callback=function(start)
+      callback=function(start,stop)
 	 start = start or self.time
-	 local interval=func(start)
+	 local interval=func(start,stop)
 	 local nextTime=start+interval
 	 self:Event(callback,nextTime,nextTime+interval)
       end
    elseif type(func)=='string' and _G[func]~=nil then
-      callback=function(start)
+      callback=function(start,stop)
 	 if _G[func]~=nil then
 	    start = start or self.time
-	    local interval=_G[func](start)
+	    local interval=_G[func](start,stop)
 	    local nextTime=start+interval
 	    self:Event(callback,nextTime,nextTime+interval)
 	 end
@@ -730,7 +730,7 @@ function Pat:QueryEvents(a,b,c)
   local i=0
   local eventOffset=math.ceil(a/step)
   local time=eventOffset*step
-  local epsilon=0.00000001 --ensure we don't accidentally get the beginning of the next pat
+  local epsilon=0.000000001 --ensure we don't accidentally get the beginning of the next pat
   if self.parallel then
     for i=1,#self.t do
       local e=self.t[i]
