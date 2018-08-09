@@ -351,7 +351,7 @@ function Metro:Interval(func)
    local callback=nil
    if type(func)=='function' then
       callback=function(start,stop)
-	 start = start or self.time
+	 start = start or math.ceil(self.time)
 	 local interval=func(start,stop)
 	 local nextTime=start+interval
 	 self:Event(callback,nextTime,nextTime+interval)
@@ -359,14 +359,14 @@ function Metro:Interval(func)
    elseif type(func)=='string' and _G[func]~=nil then
       callback=function(start,stop)
 	 if _G[func]~=nil then
-	    start = start or self.time
+	    start = start or math.ceil(self.time)
 	    local interval=_G[func](start,stop)
 	    local nextTime=start+interval
 	    self:Event(callback,nextTime,nextTime+interval)
 	 end
       end
    end
-   if callback~=nil then callback() end
+   if callback~=nil then self:Event(callback,math.ceil(self.time),math.ceil(self.time+1)) end
 end
 ----------------------
 ----------------------
@@ -1245,12 +1245,14 @@ function FMVoice.new(p)
    o.carrierBaseFreq=440*math.pow(2,(o.note-69)/12)
    o.carrier.freq=o.carrierBaseFreq
    o.modulator.freq=o.carrier.freq*o.modCoef
+   for k,v in pairs(p) do o[k]=v end
    return o
 end
 function FMVoice:Process(samplerate)
    local sr=samplerate or cybin.samplerate
    local env=self.env:Process(sr)
    if self.env.delta==-1 then self.free=true end
+   self.modulator.freq=self.carrierBaseFreq*self.modCoef
    self.carrier.freq=self.carrierBaseFreq+math.atan(self.modulator:Process(sr)*self.modShape)*self.modAmp*env
    return math.atan(self.carrier:Process(sr)*self.carrierShape)*env
 end
