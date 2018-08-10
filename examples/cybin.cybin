@@ -376,8 +376,11 @@ setmetatable(Sampler, {__call = function (cls, ...) return cls.new(...) end,})
 function Sampler.new(s)
   local o={}
   setmetatable(o,Sampler)
+  if type(s)=='string' then
+     s=cybin.loadaudiofile(s)
+  end
   o.sample=s
-  o.grainsize=s.samplerate*30/1000
+  o.grainsize=o.sample.samplerate*30/1000
   o.grain1start=0
   o.grain1sindex=0
   o.grain2start=0

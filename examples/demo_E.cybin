@@ -25,6 +25,8 @@ function play(t)
 	       return 1
 end
 
+m.events={}
+
 m:Interval('play')
 
 function __process(sr)
