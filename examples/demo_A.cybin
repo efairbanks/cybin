@@ -1,39 +1,11 @@
 require 'cybin'
-require 'table-extended'
-P=Pat
-_=P{}
-s=SawSynth()
-m=Metro()
-kick=PolySampler(cybin.loadaudiofile('KICK.AIF'))
-snare=PolySampler(cybin.loadaudiofile('SNARE.AIF'))
-hat=PolySampler(cybin.loadaudiofile('HAT.AIF'))
-comp=Compressor(-20,10,0.0001,0.07,5,48000)
-hpass=Filter()
-hpass:SetType('highpass')
-hpass:SetFreq(60,48000)
-env={bassNote=0}
+m=Metro{}
+m(function()
+      filter=Filter{filterType='lowpass',freq=400}
+      s=Sampler{sample='KICK.AIF',pitch=1+math.pow(math.random(),10)*10,speed=0.9}
+      allpass=Reverb{nodes=11,spacing=1+math.random()*math.random()*0.1,coef=0.7-math.pow(math.random(),15)*0.7+0.18}
+      comp=Compressor{threshold=-10,attack=0.001,makeup=10,release=0.01,ratio=2}
+      return ({1/8,1/4,1/2,1,2})[math.floor(math.pow(math.random(),3)*4)+1]
+end)      
+function __process(sr) m:Process(); return comp:Process((allpass:Process(s:Process()))) end
 
-function __process(sr)
-   local out=math.atan(s:Process(sr)*50)*0.9
-   --out=out+verb:Process(out)*0.8
-   out=out*0.3
-   out=out+snare:Process(sr)+hat:Process(sr)*0.3
-   out=out*0.5
-   out=hpass:Process(out)*1.5
-   local bd=kick:Process()
-   local compd=comp:Process(out,bd)
-   compd=compd+bd*0
-   m:Process(sr)
-   return compd,bd
-end
-
-function play(t)
-   m:Pat(P{1}:Fast(2),function(x,start,stop) kick:Play{pitch=0.5,speed=2} end,t,t+1)
-   m:Pat(P{_,1},function(x) snare:Play{} end,t,t+1)
-   m:Pat(P{_,1}:Fast(2),function(x) hat:Play{pitch=3,speed=1} end,t,t+1)
-   m:Pat(P{0,0,3,P{2,1.5,1,0.5}}:Slow(8),function(x) env.bassNote=x end,t,t+1)
-   m:Pat(P.GenBjork(11,17):Slow(17/4):Replace(0,_),function(x) s:Play{note=env.bassNote+32} end,t,t+1)
-   return 1
-end
-
-m:Interval('play')
