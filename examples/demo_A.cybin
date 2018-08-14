@@ -7,5 +7,5 @@ m(function()
       comp=Compressor{threshold=-10,attack=0.001,makeup=10,release=0.01,ratio=2}
       return ({1/8,1/4,1/2,1,2})[math.floor(math.pow(math.random(),3)*4)+1]
 end)      
-function __process(sr) m:Process(); return comp:Process((allpass:Process(s:Process()))) end
+function __process(sr) m:Process(); local out=comp:Process((allpass:Process(s:Process()))); return out,out end
 

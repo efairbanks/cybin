@@ -325,6 +325,9 @@ function Metro:Interval(func)
   end
   if callback~=nil then self:Event(callback,math.ceil(self.time),math.ceil(self.time+1)) end
 end
+function Metro:Stop()
+   self.events={}
+end
 --------------------------------------------
 Sampler={__call=function(self,...) return self:Set(...) end}
 Sampler.__index=Sampler

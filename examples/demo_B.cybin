@@ -15,5 +15,6 @@ m('play')
 function __process()
    m.cps=Utils.scale(math.cos(m.time*2*math.pi/16),0,1,110/120,130/120)
    m:Process()
-   return synth:Process()
+   local out=synth:Process()
+   return out,out
 end
