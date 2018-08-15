@@ -328,6 +328,10 @@ end
 function Metro:Stop()
    self.events={}
 end
+function Metro:Cycles2Seconds(cycles)
+   return cycles/self.cps
+end
+Metro.c2s=Metro.Cycles2Seconds
 --------------------------------------------
 Sampler={__call=function(self,...) return self:Set(...) end}
 Sampler.__index=Sampler
@@ -337,8 +341,8 @@ function Sampler.new(params)
   if type(o.sample)=='string' then
     o.sample=cybin.loadaudiofile(o.sample)
   end
-  o.samplerate = o.samplerate or cybin.samplerate or 48000
-  o.grainsize=o.sample.samplerate*30/1000
+  o.samplerate=o.samplerate or cybin.samplerate or 48000
+  o.grainsize=o.grainsize or o.sample.samplerate*30/1000
   o.grain1start=0
   o.grain1sindex=0
   o.grain2start=0
@@ -350,14 +354,28 @@ function Sampler.new(params)
   o.loop=o.loop or false
   o.grainxfade=1
   o.basenote=60
-  o.amp = o.amp or 1
+  o.amp=o.amp or 1
+  if o.offset~=nil then Sampler.offset(o,o.offset); o.offset=nil end
+  if o.duration~=nil then Sampler.duration(o,o.duration); o.duration=nil end
+  if o.grainDuration~=nil then Sampler.grainDuration(o,o.grainDuration); o.grainDuration=nil end
   setmetatable(o,Sampler)
   return o
+end
+function Sampler:offset(offset)
+   self.sindex=self.sample.frames*offset
+end
+function Sampler:duration(dur)
+   local seconds=self.sample.frames/self.samplerate
+   self.speed=seconds/dur
+end
+function Sampler:grainDuration(dur)
+   self.grainsize=math.floor(dur*self.samplerate)
 end
 function Sampler:Process()
   local out={}
   for i=1,self.sample.channels do out[i]=0 end
   if self.loop==false and self.sindex>self.sample.frames then
+     self.free=true
     return unpack(out)
   end
   if self.grainwindex >= self.grainsize then
@@ -702,7 +720,7 @@ function FMVoice.new(params)
   setmetatable(o,FMVoice)
   return o
 end
-function FMVoice:Process(samplerate)
+function FMVoice:Process()
   local env=self.env:Process()
   if self.env.phase==-1 then self.free=true end
   self.modulator{freq=self.freq*self.modCoef}

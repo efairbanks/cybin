@@ -1,0 +1,18 @@
+require 'cybin'
+P=Pat
+_=P{}
+m=Metro()
+m.cps=150/240
+brk=Sampler{sample='BREAK.AIF',duration=m:c2s(1),grainDuration=m:c2s(1/64)}
+function play(t)
+   m(P{1,2,1,4,1,8,1}:Slow(7/2),
+     function(y,s,e)
+	m(P.GenDup(1,8):Integrate():__sub(1):Offset(y/4),function(x,s,e) brk{offset=x/8,duration=m:c2s(y)}; end,s,e)
+     end,t,t+1)
+   return 1
+end
+m('play')
+function __process(sr)
+   m:Process()
+   return brk:Process()
+end

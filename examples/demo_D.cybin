@@ -1,0 +1,36 @@
+require 'cybin'
+P=Pat
+_=P{}
+m=Metro()
+
+KickVoice={__call=function(self,...) return self:Set(...) end}
+KickVoice.__index=KickVoice
+setmetatable(KickVoice,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+function KickVoice.new(params)
+   local o=UGen.new(params)
+   o.sampler=o.sampler or Sampler{sample=o.sample or 'KICK.AIF'}
+   o.samplerate = o.samplerate or cybin.samplerate or 48000
+   o.reverb=o.reverb or Reverb{nodes=o.nodes or 11,spacing=o.spacing or 1.375,coef=o.coef or 0.87}
+   o.comp=o.comp or Compressor{threshold=-10,attack=0.001,makeup=10,release=0.01,ratio=4}
+   setmetatable(o,KickVoice)
+   return o
+end
+
+function KickVoice:Process()
+   local samplerOut=self.sampler:Process(); local lastOut=self.lastOut or 0
+   --local out=self.comp:Process(self.reverb:Process(samplerOut),samplerOut+lastOut)+samplerOut
+   local out=self.comp:Process(self.reverb:Process(samplerOut),samplerOut)
+   self.lastOut=out
+   return math.atan(out)
+end
+kick=Poly{voice=KickVoice,maxVoices=1}
+
+function play(t)
+   m(P.GenDup(1,8):Slow(4):Integrate()/20,function(x,s,e) kick{
+	   coef=0.8+0.2*math.random(),
+	   spacing=1.01+math.sin(s/5)*0.0099
+					   } end,t,t+1)
+end
+m:Stop()
+m('play')
+function __process(sr) m:Process(); return kick:Process() end
