@@ -1,18 +1,96 @@
 require 'cybin'
+
+KickVoice={__call=function(self,...) return self:Set(...) end}
+KickVoice.__index=KickVoice
+setmetatable(KickVoice,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+function KickVoice.new(params)
+   local o=UGen.new(params)
+   o.sampler=o.sampler or Sampler{sample=o.sample or 'KICK.AIF',speed=o.speed or 1,pitch=o.pitch or 1}
+   o.samplerate = o.samplerate or cybin.samplerate or 48000
+   o.reverb=o.reverb or Reverb{nodes=o.nodes or 11,spacing=o.spacing or 1.375,coef=o.coef or 0.87}
+   o.comp=o.comp or Compressor{threshold=-10,attack=0.001,makeup=10,release=0.01,ratio=4}
+   setmetatable(o,KickVoice)
+   return o
+end
+
+function KickVoice:Process()
+   local samplerOut=self.sampler:Process(); local lastOut=self.lastOut or 0
+   --local out=self.comp:Process(self.reverb:Process(samplerOut),samplerOut+lastOut)+samplerOut
+   local out=self.comp:Process(self.reverb:Process(samplerOut),samplerOut)
+   self.lastOut=out
+   return math.atan(out)
+end
+
+NoiseOsc={__call=function(self,...) return self:Set(...) end}
+NoiseOsc.__index=NoiseOsc
+setmetatable(NoiseOsc,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+function NoiseOsc.new(params)
+   local o=UGen.new(params)
+   o.samplerate = o.samplerate or cybin.samplerate or 48000
+   o.index=Saw{freq=o.freq or 55}
+   o.mod=Sin{freq=o.freq or 55*4}
+   o.freq=nil
+   setmetatable(o,NoiseOsc)
+   return o
+end
+function NoiseOsc:freq(f)
+   self.index{freq=f}
+   self.mod{freq=f*4}
+end
+
+function NoiseOsc:Process()
+   local index=self.index:Process()*0.5+0.5
+   local sin= math.sin(math.pi*2*index)
+   local noise=(math.random()-0.5)*2
+   local out=0
+   local window=self.mod:Process()*0.05+0.1
+   if math.abs(index-0.5)<window then
+      out=noise
+   else
+      out=sin
+   end
+   out=math.atan(out*10)/8
+   return out,out   
+end
+
 P=Pat
 _=P{}
 m=Metro()
 m.cps=150/240
-brk=Sampler{sample='BREAK.AIF',duration=m:c2s(1),grainDuration=m:c2s(1/64)}
+
+breaks={
+   cybin.loadaudiofile('/Users/ericfai/Breaks/78884_OaSyntax_160_think.wav'),
+   cybin.loadaudiofile('/Users/ericfai/Breaks/78886_OaSyntax_170_amen_A_.wav'),
+   cybin.loadaudiofile('/Users/ericfai/Breaks/78891_OaSyntax_170_pulp_fiction.wav')
+}
+
+
+kick=Poly{voice=KickVoice,maxVoices=1}
+comp=Compressor{threshold=-10,ratio=3,attack=0.005,release=0.01}
+breakComp=Compressor{threshold=-15,ratio=3,attack=0.000001,release=0.01}
+bass=NoiseOsc{}
+
 function play(t)
-   m(P{1,2,1,4,1,8,1}:Slow(7/2),
-     function(y,s,e)
-	m(P.GenDup(1,8):Integrate():__sub(1):Offset(y/4),function(x,s,e) brk{offset=x/8,duration=m:c2s(y)}; end,s,e)
-     end,t,t+1)
+   m(P{1,2,3,4,5,6,7}:Slow(7),function(z,s,e)
+	m(P{1,2,3,4,5,6,7,8,9,10,11}:Slow(11/P{2,2,4,2,2,6,2}:WrapAt(z)),
+	  function(y,s,e)
+	     brk=Sampler{sample=breaks[P{1,2,3}:WrapAt(z)],duration=m:c2s(1),grainDuration=m:c2s(1/64)}
+	     --m(P{7,0,3,0}:Fast(4):__add(Pat.WrapAt({24,12,36,12,48},y)):EdoPitch2Freq(),function(x,s,e) bass{freq=x} end,s,e)
+	     m(P{1}:Offset(P{0,-2,-6,0,-5}:WrapAt(y)/8),function(x,s,e) kick{coef=P{9,8,7,9,8,7,5}:WrapAt(z)/10+0.06,spacing=1+math.random()*0.02,speed=1,pitch=1} end,s,e)
+	     m(P.GenDup(1,7):Slow(7/8):Integrate():__sub(P{0,1,0,1,0}:WrapAt(z)):Offset(P{0,-2,-4,-6,0,-5}:WrapAt(y)/8),function(x,s,e) brk{offset=x/8,duration=m:c2s(P{1,2,1,1,4,1,1,8,16,32}:WrapAt(y))}; end,s,e)
+	  end,s,e)
+	 end,t,t+1)
    return 1
 end
+
+m:Stop()
 m('play')
+
 function __process(sr)
    m:Process()
-   return brk:Process()
+   local out=0
+   if brk~=nil then out=out+math.atan(breakComp:Process(brk:Process())*3)*0.8 end
+   local kick=math.atan(kick:Process()*2)/2
+   out=comp:Process(out,kick)
+   return out,out,kick*0.85,kick*0.85
 end

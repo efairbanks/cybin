@@ -77,10 +77,11 @@ class Interpreter{
     //return CHANNEL_DATA;
     int numLuaChannels=0;
     int outChannelIndex=0;
+    int top=lua_gettop(__L);
     lua_getglobal(__L,"__process");
     if(lua_isfunction(__L, -1)){
       lua_pushnumber(__L,samplerate);
-      switch(lua_pcall(__L,1,numOutChannels,0)){
+      switch(lua_pcall(__L,1,LUA_MULTRET,0)){
         case LUA_ERRRUN:
           fprintf(stderr,"%s\nError: __process threw an unrecoverable error and has been reset.\n", lua_tostring(__L, -1));
           lua_pop(__L, 1);
@@ -90,10 +91,10 @@ class Interpreter{
         case LUA_ERRERR:fprintf(stderr,"ERROR HANDLING ERROR\n");return 0;
         default:break;
       }
-      numLuaChannels=lua_gettop(__L);
+      numLuaChannels=lua_gettop(__L)-top;
       for(int luaChannelIndex=0;luaChannelIndex<numLuaChannels;luaChannelIndex++){
-        while(outChannelIndex>numOutChannels) outChannelIndex-=numOutChannels;
-        CHANNEL_DATA[(numOutChannels-1)-outChannelIndex]=lua_tonumber(__L,-1)+(luaChannelIndex>=numOutChannels?CHANNEL_DATA[outChannelIndex]:0);
+        while(outChannelIndex>=numOutChannels) outChannelIndex-=numOutChannels;
+        CHANNEL_DATA[outChannelIndex]=lua_tonumber(__L,-1)+(luaChannelIndex>=numOutChannels?CHANNEL_DATA[outChannelIndex]:0);
         outChannelIndex++;
         lua_pop(__L,1);
       }
