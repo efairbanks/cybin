@@ -77,7 +77,7 @@ function play(t)
 	     brk=Sampler{sample=breaks[P{1,2,3}:WrapAt(z)],duration=m:c2s(1),grainDuration=m:c2s(1/64)}
 	     --m(P{7,0,3,0}:Fast(4):__add(Pat.WrapAt({24,12,36,12,48},y)):EdoPitch2Freq(),function(x,s,e) bass{freq=x} end,s,e)
 	     m(P{1}:Offset(P{0,-2,-6,0,-5}:WrapAt(y)/8),function(x,s,e) kick{coef=P{9,8,7,9,8,7,5}:WrapAt(z)/10+0.06,spacing=1+math.random()*0.02,speed=1,pitch=1} end,s,e)
-	     m(P.GenDup(1,7):Slow(7/8):Integrate():__sub(P{0,1,0,1,0}:WrapAt(z)):Offset(P{0,-2,-4,-6,0,-5}:WrapAt(y)/8),function(x,s,e) brk{offset=x/8,duration=m:c2s(P{1,2,1,1,4,1,1,8,16,32}:WrapAt(y))}; end,s,e)
+	     m(P.GenDup(1,7):Slow(7/8):Integrate():__sub(P{0,1,0,1,0}:WrapAt(z)):Offset(P{0,-2,-4,-6,0,-5}:WrapAt(y)/8),function(x,s,e) brk{offset=x/8,pitch=1,duration=m:c2s(P{1,2,1,1,4,1,1,8,16,32}:WrapAt(y))}; end,s,e)
 	  end,s,e)
 	 end,t,t+1)
    return 1

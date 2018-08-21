@@ -12,11 +12,14 @@ vec3 look(vec3 o, vec3 t, vec2 p){
 vec2 sphere(vec3 p, float r, float m){return vec2(length(p)-r,m);}
 vec2 _sub(vec2 a, vec2 b){return -a.x>b.x?vec2(-a.x,a.y):b;}
 vec2 map(vec3 p){
+  vec3 oldp=p;
   for(int i=0;i<6;i++) {
     p=abs(p);
     p-=sin(p.y*1.1+p.x);
   }
-  return sphere(p,sphere_width,0.);
+  vec2 ret=sphere(p,sphere_width,0.);
+  ret.x=max(ret.x,length(oldp)-1.4);
+  return ret;
 }
 float march(vec3 o, vec3 r){
   float d=0.3;
