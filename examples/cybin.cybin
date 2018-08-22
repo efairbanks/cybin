@@ -125,7 +125,7 @@ function Filter.new(params)
   o.a2=0
   o.b1=0
   o.b2=0
-  o.Fc=o.freq/o.samplerate or 0.25
+  o.Fc=(o.freq or 1000)/o.samplerate
   o.Q=o.reso or 0.7
   o.peakGain=0
   o.z1=0

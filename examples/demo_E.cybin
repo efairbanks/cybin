@@ -7,8 +7,9 @@ function KickVoice.new(params)
    local o=UGen.new(params)
    o.sampler=o.sampler or Sampler{sample=o.sample or 'KICK.AIF',speed=o.speed or 1,pitch=o.pitch or 1}
    o.samplerate = o.samplerate or cybin.samplerate or 48000
-   o.reverb=o.reverb or Reverb{nodes=o.nodes or 11,spacing=o.spacing or 1.375,coef=o.coef or 0.87}
+   o.reverb=o.reverb or Reverb{nodes=o.nodes or 11,spacing=o.spacing or 1.01,coef=o.coef or 0.87}
    o.comp=o.comp or Compressor{threshold=-10,attack=0.001,makeup=10,release=0.01,ratio=4}
+   o.filter=o.filter or Filter{filterType='highpass',freq=o.filterFreq or 30,reso=1}
    setmetatable(o,KickVoice)
    return o
 end
@@ -18,7 +19,7 @@ function KickVoice:Process()
    --local out=self.comp:Process(self.reverb:Process(samplerOut),samplerOut+lastOut)+samplerOut
    local out=self.comp:Process(self.reverb:Process(samplerOut),samplerOut)
    self.lastOut=out
-   return math.atan(out)
+   return math.atan(self.filter:Process(out))
 end
 
 NoiseOsc={__call=function(self,...) return self:Set(...) end}
@@ -56,7 +57,6 @@ end
 P=Pat
 _=P{}
 m=Metro()
-m.cps=150/240
 
 breaks={
    cybin.loadaudiofile('/Users/ericfai/Breaks/78884_OaSyntax_160_think.wav'),
@@ -100,7 +100,7 @@ acidBass.Process=function(self)
    local width=0.3
    local square=math.min(math.floor((out+1)/2+width),1)
    local env=self.env:Process()
-   self.lowpass{freq=30+self.filterFreq*math.pow(env,10)}
+   self.lowpass{freq=30+self.filterFreq*math.pow(env,15)}
    out=self.lowpass:Process(out+square)
    return out*env*0.1
 end
@@ -109,39 +109,67 @@ acidBass.Set=function(self,p)
    self.env{}
 end
 
-function breakdown(t)   
-   m(P.GenDup(1,2):Slow(2),function(y,s,e)
+function breakdown(t)
+   m(P{1},function(x,s,e) if t==38 then kick{spacing=1.003,coef=0.98,nodes=17}; if brk~=nil then brk{offset=1} end end end,t,t+1)
+   m(P.GenDup(1,13):Integrate():Slow(13/4),function(y,s,e)
 	local seqLen=17
-	m(P.GenDup(1,seqLen):Slow(seqLen/8):Integrate():__sub(1):Apply(
+	local speed=P.WrapAt(P.GenBjork(5,13)+1,y)
+	m(P.GenDup(1,seqLen):Slow(seqLen/(8*speed)):Integrate():__sub(1):Apply(
 	     function(x)
 		return ((x%3)*5+math.floor(x)*7)%12+(x%3)*12-(((x+1)%5)%2)*12 end),
-	  function(x,s,e) acidBass{note=17+x} end,s,e)
+	  function(x,s,e) acidBass{note=17+x}; if brk~=nil then brk{grainDuration=1/Pat.EdoPitch2Freq({17+x})[1]} end end,s,e)
 			   end,t,t+1)
    return 1
 end
 
-function play(t)
-   --print(t)
-   breakdown(t)
-   --[[
-   if t<18 then
-      return intro(t)
-   else
-      return verse(t)
-   end
-   --]]
+function breakdown2(t)
+   brk=Sampler{sample=breaks[P{1,2,3}:WrapAt(3)],duration=m:c2s(1),grainDuration=m:c2s(1/32)}
+   return breakdown(t)
 end
 
+function breakdown3(t)
+   m(P.GenDup(1,17):Integrate():Slow(17/8):Apply(function(x) return x end):Apply(function(x) return x%8 end),
+     function(x,s,e)
+	local decay=1/((s-45)*4)
+	if brk~=nil then brk{offset=x/8,speed=m:c2s(math.pow(decay,0.7))} end
+	acidBass{filterFreq=math.pow(1/((s-45)),3)*20000}
+	m.cps=(150/240)*math.pow(1/((s-45)),0.05)
+	if x==0 or x==5 then kick{nodes=17,spacing=1.1-decay*0.1,coef=1-decay,speed=1/decay,pitch=1*decay,filterFreq=1500} end
+     end,t,t+1)
+   return breakdown2(t)
+end
+
+function play(t)
+   --print(t)
+   if t>=18 then section=2 end
+   if t>=38 then section=3 end
+   if t>=42 then section=4 end
+   if t>=45 and t<46 then kick{nodes=23,spacing=1.15,coef=0.5,filterFreq=450} end
+   if t>=46 then section=5 end
+   local section=({intro,verse,breakdown,breakdown2,breakdown3})[section]
+   if section ~= nil then
+      return section(t)
+   else
+      return 1
+   end
+end
+
+--reset
+brk=nil
+acidBass.filterFreq=9000
+section=1
 m:Stop()
 m.time=0
+m.cps=150/240
 m('play')
 
+sideHp=Filter{filterType='highpass',200}
 function __process(sr)
    m:Process()
    local out=0
    if brk~=nil then out=out+math.atan(breakComp:Process(brk:Process())*3)*0.8 end
    local kick=kick:Process()
    out=out+acidBass:Process()
-   out=comp:Process(out,kick)
+   out=comp:Process(out,sideHp:Process(kick))
    return out,out,kick*0.85,kick*0.85
 end
