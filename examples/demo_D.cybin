@@ -1,17 +1,15 @@
 require 'cybin'
-P=Pat
-_=P{}
-m=Metro()
 
 KickVoice={__call=function(self,...) return self:Set(...) end}
 KickVoice.__index=KickVoice
 setmetatable(KickVoice,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
 function KickVoice.new(params)
    local o=UGen.new(params)
-   o.sampler=o.sampler or Sampler{sample=o.sample or 'KICK.AIF'}
+   o.sampler=o.sampler or Sampler{sample=o.sample or 'KICK.AIF',speed=o.speed or 1,pitch=o.pitch or 1}
    o.samplerate = o.samplerate or cybin.samplerate or 48000
-   o.reverb=o.reverb or Reverb{nodes=o.nodes or 11,spacing=o.spacing or 1.375,coef=o.coef or 0.87}
+   o.reverb=o.reverb or Reverb{nodes=o.nodes or 11,spacing=o.spacing or 1.01,coef=o.coef or 0.87}
    o.comp=o.comp or Compressor{threshold=-10,attack=0.001,makeup=10,release=0.01,ratio=4}
+   o.filter=o.filter or Filter{filterType='highpass',freq=o.filterFreq or 30,reso=1}
    setmetatable(o,KickVoice)
    return o
 end
@@ -21,16 +19,166 @@ function KickVoice:Process()
    --local out=self.comp:Process(self.reverb:Process(samplerOut),samplerOut+lastOut)+samplerOut
    local out=self.comp:Process(self.reverb:Process(samplerOut),samplerOut)
    self.lastOut=out
-   return math.atan(out)
+   return math.atan(self.filter:Process(out))
 end
+
+NoiseOsc={__call=function(self,...) return self:Set(...) end}
+NoiseOsc.__index=NoiseOsc
+setmetatable(NoiseOsc,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+function NoiseOsc.new(params)
+   local o=UGen.new(params)
+   o.samplerate = o.samplerate or cybin.samplerate or 48000
+   o.index=Saw{freq=o.freq or 55}
+   o.mod=Sin{freq=o.freq or 55*4}
+   o.freq=nil
+   setmetatable(o,NoiseOsc)
+   return o
+end
+function NoiseOsc:freq(f)
+   self.index{freq=f}
+   self.mod{freq=f*4}
+end
+
+function NoiseOsc:Process()
+   local index=self.index:Process()*0.5+0.5
+   local sin= math.sin(math.pi*2*index)
+   local noise=(math.random()-0.5)*2
+   local out=0
+   local window=self.mod:Process()*0.05+0.1
+   if math.abs(index-0.5)<window then
+      out=noise
+   else
+      out=sin
+   end
+   out=math.atan(out*10)/8
+   return out,out   
+end
+
+P=Pat
+_=P{}
+m=Metro()
+
+breaks={
+   cybin.loadaudiofile('/Users/ericfai/Breaks/78884_OaSyntax_160_think.wav'),
+   cybin.loadaudiofile('/Users/ericfai/Breaks/78886_OaSyntax_170_amen_A_.wav'),
+   cybin.loadaudiofile('/Users/ericfai/Breaks/78891_OaSyntax_170_pulp_fiction.wav')
+}
+
+
 kick=Poly{voice=KickVoice,maxVoices=1}
+comp=Compressor{threshold=-10,ratio=3,attack=0.005,release=0.01}
+breakComp=Compressor{threshold=-15,ratio=3,attack=0.000001,release=0.01}
+bass=NoiseOsc{}
+
+function verse(t)
+   m(P{1,2,3,4,5,6,7}:Slow(7),function(z,s,e)
+	m(P{1,2,3,4,5,6,7,8,9,10,11}:Slow(11/P{2,2,4,2,2,6,2}:WrapAt(z)),
+	  function(y,s,e)
+	     brk=Sampler{sample=breaks[P{1,2,3}:WrapAt(z)],duration=m:c2s(1),grainDuration=m:c2s(1/64)}
+	     --m(P{7,0,3,0}:Fast(4):__add(Pat.WrapAt({24,12,36,12,48},y)):EdoPitch2Freq(),function(x,s,e) bass{freq=x} end,s,e)
+	     m(P{1}:Offset(P{0,-2,-6,0,-5}:WrapAt(y)/8),function(x,s,e) kick{coef=P{9,8,7,9,8,7,5}:WrapAt(z)/10+0.06,spacing=1+math.random()*0.02,speed=1,pitch=1} end,s,e)
+	     m(P.GenDup(1,7):Slow(7/8):Integrate():__sub(P{0,1,0,1,0}:WrapAt(z)):Offset(P{0,-2,-4,-6,0,-5}:WrapAt(y)/8),function(x,s,e) brk{offset=x/8,pitch=1,duration=m:c2s(P{1,2,1,1,4,1,1,8,16,32}:WrapAt(y))}; end,s,e)
+	  end,s,e)
+			      end,t,t+1)
+   return 1
+end
+
+function intro(t)
+   m(P.GenDup(1,5):Integrate():Slow(4):Reverse():Apply(function(x) return math.pow(2,x) end),
+     function(y,s,e) 
+	m(P.GenDup(1,16):Integrate():Slow(y/2),function(x,s,e) kick{nodes=Pat.WrapAt({3,13,5,17,7},x),coef=Pat.WrapAt({0.1,0.5,0.9,0.7},x),spacing=Pat.WrapAt({1.1,1.01,1.03,1.2,1.001},x),pitch=1+math.pow(math.fmod(t,18)/18,8)*20.} end,t,t+1)
+     end,t,t+1)
+   return 1
+end
+
+acidBass={saw=Saw{},env=Env{},lowpass=Filter{filterType='lowpass',freq=1000,reso=4},lastNote=24,note=36,portamento=0.002,filterFreq=9000}
+setmetatable(acidBass,{__call=function(self,...) return self:Set(...) end})
+acidBass.Process=function(self)
+   self.saw{freq=440*math.pow(2,(self.lastNote-57)/12)}
+   self.lastNote=self.lastNote*(1-self.portamento)+self.note*self.portamento
+   local out=self.saw:Process()
+   local width=0.3
+   local square=math.min(math.floor((out+1)/2+width),1)
+   local env=self.env:Process()
+   self.lowpass{freq=30+self.filterFreq*math.pow(env,15)}
+   out=self.lowpass:Process(out+square)
+   return out*env*0.1
+end
+acidBass.Set=function(self,p)
+   UGen.Set(self,p)
+   self.env{}
+end
+
+function breakdown(t)
+   m(P{1},function(x,s,e) if t==38 then kick{spacing=1.003,coef=0.98,nodes=17}; if brk~=nil then brk{offset=1} end end end,t,t+1)
+   m(P.GenDup(1,13):Integrate():Slow(13/4),function(y,s,e)
+	local seqLen=17
+	local speed=P.WrapAt(P.GenBjork(5,13)+1,y)
+	m(P.GenDup(1,seqLen):Slow(seqLen/(8*speed)):Integrate():__sub(1):Apply(
+	     function(x)
+		return ((x%3)*5+math.floor(x)*7)%12+(x%3)*12-(((x+1)%5)%2)*12 end),
+	  function(x,s,e) acidBass{note=17+x}; if brk~=nil then brk{grainDuration=1/Pat.EdoPitch2Freq({17+x})[1]} end end,s,e)
+			   end,t,t+1)
+   return 1
+end
+
+function breakdown2(t)
+   brk=Sampler{sample=breaks[P{1,2,3}:WrapAt(3)],duration=m:c2s(1),grainDuration=m:c2s(1/32)}
+   return breakdown(t)
+end
+
+function breakdown3(t)
+   m(P.GenDup(1,17):Integrate():Slow(17/8):Apply(function(x) return x end):Apply(function(x) return x%8 end),
+     function(x,s,e)
+	local decay=1/((s-45)*4)
+	if brk~=nil then brk{offset=x/8,speed=m:c2s(math.pow(decay,0.7))} end
+	acidBass{filterFreq=math.pow(1/((s-45)),3)*20000}
+	m.cps=(150/240)*math.pow(1/((s-45)),0.05)
+	if x==0 or x==5 then kick{nodes=17,spacing=1.1-decay*0.1,coef=1-decay,speed=1/decay,pitch=1*decay,filterFreq=1500*(1-decay)+30} end
+     end,t,t+1)
+   return breakdown2(t)
+end
 
 function play(t)
-   m(P.GenDup(1,8):Slow(4):Integrate()/20,function(x,s,e) kick{
-	   coef=0.8+0.2*math.random(),
-	   spacing=1.01+math.sin(s/5)*0.0099
-					   } end,t,t+1)
+   --print(t)
+   if t>=18 then section=2 end
+   if t>=38 then section=3 end
+   if t>=42 then section=4 end
+   if t>=45 and t<46 then kick{nodes=23,spacing=1.15,coef=0.5,filterFreq=450} end
+   if t>=46 then section=5 end
+   if t>=63 then m(P{0,1},function(x,s,e) if x==1 then brk=nil; section=6 end end,t,t+1) end
+   if t>=64 then section=6 end
+   local section=({intro,verse,breakdown,breakdown2,breakdown3})[section]
+   if section ~= nil then
+      return section(t)
+   else
+      return 1
+   end
 end
+
+--reset
+brk=nil
+acidBass.filterFreq=9000
+section=1
 m:Stop()
+m.time=0
+m.cps=150/240
 m('play')
-function __process(sr) m:Process(); return kick:Process() end
+
+sideHp=Filter{filterType='highpass',200}
+globVerb=Reverb2{nodes=11,echoDuration=0.345,coef=0.95,damp=0.5,lowpassFreq=10000,spacing=1.12345}
+verbHp=Filter{filterType='highpass',300}
+verbComp=Compressor{threshold=-25,ratio=2.7,attack=0.001,release=0.03}
+masterComp=Compressor{threshold=0,ratio=10,attack=0.000001,release=1}
+function __process(sr)
+   m:Process()
+   local out=0
+   if brk~=nil then out=out+math.atan(breakComp:Process(brk:Process())*3)*0.8 end
+   local kick=kick:Process()
+   out=out+acidBass:Process()*1.05
+   out=comp:Process(out,sideHp:Process(kick))
+   out=out+verbComp:Process(verbHp:Process(globVerb:Process(out+kick)*0.15),out+kick)
+   kick=kick*0.6
+   out=masterComp:Process((out+kick))
+   return out,out
+end
