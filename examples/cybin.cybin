@@ -660,6 +660,34 @@ function Reverb:Process(input)
   return out
 end
 --------------------------------------------
+Reverb2={__call=function(self,...) return self:Set(...) end}
+Reverb2.__index=Reverb2
+setmetatable(Reverb2,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+function Reverb2.new(params)
+  local o=UGen.new(params)
+  o.samplerate = o.samplerate or cybin.samplerate or 48000
+  o.coef=o.coef or 0.9
+  o.damp=o.damp or 0.3
+  o.lowpass=Filter{filterType='lowpass',freq=o.lowpassFreq or 5000,reso=0.1}
+  o.delay=Delay{delay=o.echoDuration or 1}
+  o.nodes = o.nodes or 5
+  o.spacing = o.spacing or 1.123
+  o.lastSample=0
+  o.allpasses={}
+  for i=1,o.nodes do o.allpasses[i]=Allpass{delay=0.0123*math.pow(o.spacing,i),coef=o.coef,samplerate=o.samplerate} end
+  setmetatable(o,Reverb2)
+  return o
+end
+function Reverb2:Process(input)
+   local out=input+self.lowpass:Process(self.delay:Process(self.lastSample)*self.damp)
+   for i=1,#self.allpasses do
+      self.allpasses[i].coef=self.coef
+      out=self.allpasses[i]:Process(out)
+   end
+   self.lastSample=out
+   return out
+end
+--------------------------------------------
 Poly={__call=function(self,...) return self:Set(...) end}
 Poly.__index=Poly
 setmetatable(Poly,{__call=function(cls,...) return cls.new(...) end,__index=UGen})

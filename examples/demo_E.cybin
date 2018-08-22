@@ -134,7 +134,7 @@ function breakdown3(t)
 	if brk~=nil then brk{offset=x/8,speed=m:c2s(math.pow(decay,0.7))} end
 	acidBass{filterFreq=math.pow(1/((s-45)),3)*20000}
 	m.cps=(150/240)*math.pow(1/((s-45)),0.05)
-	if x==0 or x==5 then kick{nodes=17,spacing=1.1-decay*0.1,coef=1-decay,speed=1/decay,pitch=1*decay,filterFreq=1500} end
+	if x==0 or x==5 then kick{nodes=17,spacing=1.1-decay*0.1,coef=1-decay,speed=1/decay,pitch=1*decay,filterFreq=1500*(1-decay)+30} end
      end,t,t+1)
    return breakdown2(t)
 end
@@ -146,6 +146,8 @@ function play(t)
    if t>=42 then section=4 end
    if t>=45 and t<46 then kick{nodes=23,spacing=1.15,coef=0.5,filterFreq=450} end
    if t>=46 then section=5 end
+   if t>=63 then m(P{0,1},function(x,s,e) if x==1 then brk=nil; section=6 end end,t,t+1) end
+   if t>=64 then section=6 end
    local section=({intro,verse,breakdown,breakdown2,breakdown3})[section]
    if section ~= nil then
       return section(t)
@@ -164,12 +166,19 @@ m.cps=150/240
 m('play')
 
 sideHp=Filter{filterType='highpass',200}
+globVerb=Reverb2{nodes=11,echoDuration=0.345,coef=0.95,damp=0.5,lowpassFreq=10000,spacing=1.12345}
+verbHp=Filter{filterType='highpass',300}
+verbComp=Compressor{threshold=-25,ratio=2.7,attack=0.001,release=0.03}
+masterComp=Compressor{threshold=0,ratio=10,attack=0.000001,release=1}
 function __process(sr)
    m:Process()
    local out=0
    if brk~=nil then out=out+math.atan(breakComp:Process(brk:Process())*3)*0.8 end
    local kick=kick:Process()
-   out=out+acidBass:Process()
+   out=out+acidBass:Process()*1.05
    out=comp:Process(out,sideHp:Process(kick))
-   return out,out,kick*0.85,kick*0.85
+   out=out+verbComp:Process(verbHp:Process(globVerb:Process(out+kick)*0.15),out+kick)
+   kick=kick*0.6
+   out=masterComp:Process((out+kick))
+   return out,out
 end

@@ -1,7 +1,0 @@
-require 'cybin'
-s=Synth()
-
-
-function __process(sr)
-   
-end
