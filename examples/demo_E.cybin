@@ -70,7 +70,7 @@ comp=Compressor{threshold=-10,ratio=3,attack=0.005,release=0.01}
 breakComp=Compressor{threshold=-15,ratio=3,attack=0.000001,release=0.01}
 bass=NoiseOsc{}
 
-function play(t)
+function verse(t)
    m(P{1,2,3,4,5,6,7}:Slow(7),function(z,s,e)
 	m(P{1,2,3,4,5,6,7,8,9,10,11}:Slow(11/P{2,2,4,2,2,6,2}:WrapAt(z)),
 	  function(y,s,e)
@@ -79,18 +79,36 @@ function play(t)
 	     m(P{1}:Offset(P{0,-2,-6,0,-5}:WrapAt(y)/8),function(x,s,e) kick{coef=P{9,8,7,9,8,7,5}:WrapAt(z)/10+0.06,spacing=1+math.random()*0.02,speed=1,pitch=1} end,s,e)
 	     m(P.GenDup(1,7):Slow(7/8):Integrate():__sub(P{0,1,0,1,0}:WrapAt(z)):Offset(P{0,-2,-4,-6,0,-5}:WrapAt(y)/8),function(x,s,e) brk{offset=x/8,pitch=1,duration=m:c2s(P{1,2,1,1,4,1,1,8,16,32}:WrapAt(y))}; end,s,e)
 	  end,s,e)
-	 end,t,t+1)
+			      end,t,t+1)
    return 1
 end
 
+function intro(t)
+   m(P.GenDup(1,5):Integrate():Slow(4):Reverse():Apply(function(x) return math.pow(2,x) end),
+     function(y,s,e) 
+	m(P.GenDup(1,16):Integrate():Slow(y/2),function(x,s,e) kick{nodes=Pat.WrapAt({3,13,5,17,7},x),coef=Pat.WrapAt({0.1,0.5,0.9,0.7},x),spacing=Pat.WrapAt({1.1,1.01,1.03,1.2,1.001},x),pitch=1+math.pow(math.fmod(t,18)/18,8)*20.} end,t,t+1)
+     end,t,t+1)
+   return 1
+end
+
+function play(t)
+   --print(t)
+   if t<18 then
+      return intro(t)
+   else
+      return verse(t)
+   end
+end
+
 m:Stop()
+m.time=0
 m('play')
 
 function __process(sr)
    m:Process()
    local out=0
    if brk~=nil then out=out+math.atan(breakComp:Process(brk:Process())*3)*0.8 end
-   local kick=math.atan(kick:Process()*2)/2
+   local kick=kick:Process()
    out=comp:Process(out,kick)
    return out,out,kick*0.85,kick*0.85
 end
