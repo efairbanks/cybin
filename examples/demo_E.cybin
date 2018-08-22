@@ -91,13 +91,45 @@ function intro(t)
    return 1
 end
 
+acidBass={saw=Saw{},env=Env{},lowpass=Filter{filterType='lowpass',freq=1000,reso=4},lastNote=24,note=36,portamento=0.002,filterFreq=9000}
+setmetatable(acidBass,{__call=function(self,...) return self:Set(...) end})
+acidBass.Process=function(self)
+   self.saw{freq=440*math.pow(2,(self.lastNote-57)/12)}
+   self.lastNote=self.lastNote*(1-self.portamento)+self.note*self.portamento
+   local out=self.saw:Process()
+   local width=0.3
+   local square=math.min(math.floor((out+1)/2+width),1)
+   local env=self.env:Process()
+   self.lowpass{freq=30+self.filterFreq*math.pow(env,10)}
+   out=self.lowpass:Process(out+square)
+   return out*env*0.1
+end
+acidBass.Set=function(self,p)
+   UGen.Set(self,p)
+   self.env{}
+end
+
+function breakdown(t)   
+   m(P.GenDup(1,2):Slow(2),function(y,s,e)
+	local seqLen=17
+	m(P.GenDup(1,seqLen):Slow(seqLen/8):Integrate():__sub(1):Apply(
+	     function(x)
+		return ((x%3)*5+math.floor(x)*7)%12+(x%3)*12-(((x+1)%5)%2)*12 end),
+	  function(x,s,e) acidBass{note=17+x} end,s,e)
+			   end,t,t+1)
+   return 1
+end
+
 function play(t)
    --print(t)
+   breakdown(t)
+   --[[
    if t<18 then
       return intro(t)
    else
       return verse(t)
    end
+   --]]
 end
 
 m:Stop()
@@ -109,6 +141,7 @@ function __process(sr)
    local out=0
    if brk~=nil then out=out+math.atan(breakComp:Process(brk:Process())*3)*0.8 end
    local kick=kick:Process()
+   out=out+acidBass:Process()
    out=comp:Process(out,kick)
    return out,out,kick*0.85,kick*0.85
 end
