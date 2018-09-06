@@ -1052,7 +1052,7 @@ function Pat:Apply(f)
     if type(value)=='table' then
       self.t[i]=value:Apply(f)
     else
-      self.t[i]=f(value)
+      self.t[i]=f(value,i)
     end
   end
   return self

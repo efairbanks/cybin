@@ -154,7 +154,7 @@ void* input_handler(void* data){
 int main(int argc, char** argv){
   // --- Start Lua --- //
   Interpreter::Init();
-  Frag::Init(argc,argv,NULL,NULL,NULL);
+  //Frag::Init(argc,argv,NULL,NULL,NULL);
   // --- Register cybin.loadaudiofile --- //
   Interpreter::LoadFunction("loadaudiofile",cybin_loadaudiofile);
   Interpreter::LoadFunction("loadfragmentshader",cybin_loadfragmentshader);

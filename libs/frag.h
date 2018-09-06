@@ -20,6 +20,9 @@
 #include <GL/glext.h>
 #endif
 
+int DUMMY_ARGC = 1;
+const char* DUMMY_ARGV[] = {"cybin"};
+
 class Frag{
   public:
     static bool _initialized;
@@ -63,19 +66,22 @@ class Frag{
       _time+=i*0.001;
     }
     static void Init(int argc,char** argv,void (*reshape)(int,int),void (*display)(),void (*timer)(int)){
-      _reshape=reshape==NULL?_default_reshape:reshape;
-      _display=display==NULL?_default_display:display;
-      _timer=timer==NULL?_default_timer:timer;
-      glutInit(&argc, argv);
-      glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
-      _uniform_resolution=-1;
-      _uniform_time=-1;
-      _fragment_id=0;
-      _program_id=0;
-      _window_id=0;
-      _initialized=true;
+      if(_initialized==false) {
+        _reshape=reshape==NULL?_default_reshape:reshape;
+        _display=display==NULL?_default_display:display;
+        _timer=timer==NULL?_default_timer:timer;
+        glutInit(&argc, argv);
+        glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
+        _uniform_resolution=-1;
+        _uniform_time=-1;
+        _fragment_id=0;
+        _program_id=0;
+        _window_id=0;
+        _initialized=true;
+      }
     }
     static void LoadString(char* s){
+      Init(DUMMY_ARGC,(char**)DUMMY_ARGV,NULL,NULL,NULL);
       if(_window_id<1){
         _window_id=glutCreateWindow("Cybin");
         glClearColor(0,0,0,1);
@@ -116,6 +122,7 @@ class Frag{
       _uniform_time=Frag::GetUniformID("time"); 
     }
     static void LoadFile(char* file_name){
+      Init(DUMMY_ARGC,(char**)DUMMY_ARGV,NULL,NULL,NULL);
       if(_window_id<1){
         _window_id=glutCreateWindow("Cybin");
         glClearColor(0,0,0,1);
@@ -164,6 +171,7 @@ class Frag{
       free(f);
     }
     static int GetUniformID(char* name){
+      Init(DUMMY_ARGC,(char**)DUMMY_ARGV,NULL,NULL,NULL);
       return _initialized&&_program_id?glGetUniformLocation(_program_id,name):-1;
     }
     static void EventLoop(){if(_initialized)glutMainLoopEvent();}
