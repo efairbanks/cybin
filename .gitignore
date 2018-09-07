@@ -2,6 +2,7 @@ cybin
 a.out
 *.swp
 *.wav
+*.mp4
 *.o
 *.out
 .DS_Store

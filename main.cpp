@@ -5,6 +5,7 @@
 #include <soundio/soundio.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <math.h>
 #include "libs/audio.h"
 #include "libs/audiofile.h"
 #include "libs/interpreter.h"
@@ -22,6 +23,7 @@ struct{
   int channels;
   char* outfile;
   char* loadfile;
+  int fps;
 } Config;
 typedef struct{
   char COMMAND_BUFFER[1048576];
@@ -36,6 +38,7 @@ void parse_args(int argc, char** argv){
   Config.channels=2;
   Config.outfile="cybin.wav";
   Config.loadfile=NULL;
+  Config.fps=25;
   for(int i=1;i<argc;i++){
     char* currentArg=argv[i];
     if(strcmp("--offline",currentArg)==0){
@@ -60,6 +63,9 @@ void parse_args(int argc, char** argv){
     } else if(strcmp("--set-device",currentArg)==0){
       i++;currentArg=argv[i];
       Config.set_device=atoi(currentArg);
+    } else if(strcmp("--fps",currentArg)==0){
+      i++;currentArg=argv[i];
+      Config.fps=atoi(currentArg);
     } else {
       Config.loadfile=currentArg;
     }
@@ -90,6 +96,11 @@ int cybin_loadaudiofile(lua_State* L){
   lua_pushstring(L,"channels");lua_pushnumber(L,file.channels);lua_settable(L,-3);
   lua_pushstring(L,"samplerate");lua_pushnumber(L,file.sampleRate);lua_settable(L,-3);
   return 1;
+}
+int cybin_screendump(lua_State* L){
+  const char* fileName = lua_tostring(L,1);
+  Frag::ScreenDump((char*)fileName);
+  return 0;
 }
 int cybin_loadfragmentshader(lua_State* L){
   const char* shader = lua_tostring(L,1);
@@ -154,9 +165,9 @@ void* input_handler(void* data){
 int main(int argc, char** argv){
   // --- Start Lua --- //
   Interpreter::Init();
-  //Frag::Init(argc,argv,NULL,NULL,NULL);
   // --- Register cybin.loadaudiofile --- //
   Interpreter::LoadFunction("loadaudiofile",cybin_loadaudiofile);
+  Interpreter::LoadFunction("screendump",cybin_screendump);
   Interpreter::LoadFunction("loadfragmentshader",cybin_loadfragmentshader);
   Interpreter::LoadFunction("loadfragmentshaderfile",cybin_loadfragmentshaderfile);
   Interpreter::LoadFunction("getuniformid",cybin_getuniformid);
@@ -174,14 +185,34 @@ int main(int argc, char** argv){
     int frames=int(Config.duration*Config.samplerate);
     float* buffer = (float*)malloc(frames*Config.channels*sizeof(float));
     int progress=-1;
+    int glFrameCounter=0;
     for(int i=0;i<frames;i++) {
       progress=print_progress(i,frames,20,progress);
       float* samples=Interpreter::Process(Config.samplerate,Config.channels);
       for(int j=0;j<Config.channels;j++) buffer[i*Config.channels+j]=samples[j];
+      if(Frag::_initialized){
+        float time=((float)i)/((float)Config.samplerate);
+        float lastTime=((float)(i-1))/((float)Config.samplerate);
+        float glFrameIndex=fmod(time*((float)Config.fps),1.);
+        float glLastFrameIndex=fmod(lastTime*((float)Config.fps),1.);
+        if(i==0 || glLastFrameIndex>glFrameIndex){
+          char fileName[256];
+          sprintf(fileName,"%s_%08d.tga",Config.outfile,glFrameCounter);
+          Frag::EventLoop();
+          Frag::WaitForFrame();
+          Frag::ScreenDump(fileName);
+          glFrameCounter++;
+        }
+      } 
     }
     AudioFile file(buffer,int(Config.duration*Config.samplerate),Config.channels,Config.samplerate);
     file.Write(Config.outfile);
-    printf("\n%s Wrote audio to %s\n",CYBIN_PROMPT,Config.outfile);
+      printf("\n%s Wrote audio to %s\n",CYBIN_PROMPT,Config.outfile);
+      if(Frag::_initialized){
+      char cmd[1024];
+      sprintf(cmd,"ffmpeg -y -r %d -i %s_%s -i %s -c:v libx264 -c:a aac -pix_fmt yuv420p %s.mp4",Config.fps,Config.outfile,"%08d.tga",Config.outfile,Config.outfile);
+      if(system(cmd)==0) system("rm *.tga");
+    }
   } else {        // --- REALTIME RENDERING --- //
     // --- Continue startup --- //
     Audio::Init(__process,Config.set_device);

@@ -1,16 +1,11 @@
-
 cybin.loadfragmentshaderfile("raymarch.frag")
 sphere_width=cybin.getuniformid("sphere_width")
-cybin.setuniform1f(sphere_width,"0.45")
-
 sample=0
 function __process(sr)
+   local lfo=math.abs(math.sin(sample*math.pi/sr))
    sample=sample+1
-   local lfo=math.sin(sample*3/sr)*0.5+0.5
-   if(sample%1000==0) then
-      cybin.setuniform1f(sphere_width,lfo/2+0.2)
-   end
-   local output=math.random()*(1-lfo)
+   cybin.setuniform1f(sphere_width,lfo*1.4)
+   local output=math.random()*lfo
    return output,output
 end
 

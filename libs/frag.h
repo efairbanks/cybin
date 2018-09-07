@@ -22,6 +22,7 @@
 
 int DUMMY_ARGC = 1;
 const char* DUMMY_ARGV[] = {"cybin"};
+int WAITING_FOR_FRAME = 0;
 
 class Frag{
   public:
@@ -51,14 +52,15 @@ class Frag{
       glUseProgram(_program_id);
       glRecti(-1,-1,1,1);
       glutSwapBuffers();
+      WAITING_FOR_FRAME=0;
     }
     static void _default_timer(int i){
       float delta=i*0.001;
       /* EXAMPLE: HOT RELOADING
-      int secBefore=(int)(_time);
-      int secAfter=(int)(_time+delta);
-      if(secBefore!=secAfter) Load("simple.frag");
-      */
+         int secBefore=(int)(_time);
+         int secAfter=(int)(_time+delta);
+         if(secBefore!=secAfter) Load("simple.frag");
+       */
       if(_uniform_time!=-1) glUniform1f(_uniform_time,_time);
       if(_uniform_resolution!=-1) glUniform2f(_uniform_resolution,_width,_height);
       glutPostRedisplay();
@@ -173,6 +175,22 @@ class Frag{
     static int GetUniformID(char* name){
       Init(DUMMY_ARGC,(char**)DUMMY_ARGV,NULL,NULL,NULL);
       return _initialized&&_program_id?glGetUniformLocation(_program_id,name):-1;
+    }
+    static void ScreenDump(char *fileName){
+      Init(DUMMY_ARGC,(char**)DUMMY_ARGV,NULL,NULL,NULL);
+      FILE   *out = fopen(fileName,"wb");
+      char   *pixel_data = new char[3*_width*_height];
+      short  TGAhead[] = { 0, 2, 0, 0, 0, 0, _width, _height, 24 };
+      glReadBuffer(GL_FRONT);
+      glReadPixels(0, 0, _width, _height, GL_BGR, GL_UNSIGNED_BYTE, pixel_data);
+      fwrite(&TGAhead,sizeof(TGAhead),1,out);
+      fwrite(pixel_data, 3*_width*_height, 1, out);
+      fclose(out);
+      delete[] pixel_data;
+    }
+    static void WaitForFrame(){
+      WAITING_FOR_FRAME=1;
+      while(WAITING_FOR_FRAME) {EventLoop(); usleep(1);}
     }
     static void EventLoop(){if(_initialized)glutMainLoopEvent();}
 };

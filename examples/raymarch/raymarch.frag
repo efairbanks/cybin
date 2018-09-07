@@ -1,7 +1,6 @@
 uniform vec2 resolution;
 uniform float time;
 uniform float sphere_width;
-
 vec3 look(vec3 o, vec3 t, vec2 p){
   vec3 ray = normalize(t-o);
   vec3 right = normalize(cross(ray,vec3(0.,1.,0.)));
@@ -12,13 +11,7 @@ vec3 look(vec3 o, vec3 t, vec2 p){
 vec2 sphere(vec3 p, float r, float m){return vec2(length(p)-r,m);}
 vec2 _sub(vec2 a, vec2 b){return -a.x>b.x?vec2(-a.x,a.y):b;}
 vec2 map(vec3 p){
-  vec3 oldp=p;
-  for(int i=0;i<6;i++) {
-    p=abs(p);
-    p-=sin(p.y*1.1+p.x);
-  }
   vec2 ret=sphere(p,sphere_width,0.);
-  ret.x=max(ret.x,length(oldp)-1.4);
   return ret;
 }
 float march(vec3 o, vec3 r){
