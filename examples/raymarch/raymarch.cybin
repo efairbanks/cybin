@@ -1,11 +1,34 @@
+dofile('../cybin.cybin')
 cybin.loadfragmentshaderfile("raymarch.frag")
 sphere_width=cybin.getuniformid("sphere_width")
-sample=0
+
+kick=Sampler{sample='../KICK.AIF',speed=0.1,pitch=2}
+m=Metro()
+P=Pat
+_=P{}
+
+function play(t)
+   m(
+      P.GenBjork(5,13):Replace(0,_):Slow(13/4),
+      function(x,s,e)
+	 kick=Sampler{sample='../KICK.AIF',speed=0.2,pitch=3}
+      end,t,t+1)
+   print(t)
+end
+
+m('play')
+
+rms=0
 function __process(sr)
-   local lfo=math.abs(math.sin(sample*math.pi/sr))
-   sample=sample+1
-   cybin.setuniform1f(sphere_width,lfo*1.4)
-   local output=math.random()*lfo
+   m:Process()
+   local output=kick:Process(sr)
+   local coef=0.99995
+   if math.abs(output)>rms then
+      rms = math.abs(output)
+   else
+      rms = rms*coef+math.abs(output)*(1-coef)
+   end
+   cybin.setuniform1f(sphere_width,rms*1.4)
    return output,output
 end
 

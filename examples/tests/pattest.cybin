@@ -1,5 +1,5 @@
-require 'cybin'
-require 'table-extended'
+dofile '../cybin.cybin'
+dofile '../table-extended.cybin'
 print()
 print()
 p=Pat{1,2,3,{0,4}}
