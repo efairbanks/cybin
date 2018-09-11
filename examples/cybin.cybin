@@ -417,7 +417,7 @@ function Sampler:GetChannels(i)
   for j=1,self.sample.channels do
     local currentSample=self.sample[intIndex*self.sample.channels+j-1] or 0
     local nextSample=self.sample[intNextIndex*self.sample.channels+j-1] or currentSample
-    out[j]=currentSample*(1-fracIndex)+nextSample*fracIndex
+    out[j]=(currentSample*(1-fracIndex)+nextSample*fracIndex)*self.amp
     -- simplified version doesn't work even though mathematically equivalent?????
     --out[j]=currentSample-(currentSample+nextSample)*fracIndex
   end
