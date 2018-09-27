@@ -21,7 +21,7 @@ function UGen:Set(params)
     end
   end
 end
-function UGen:Process(params)
+function UGen:Process()
   return 0
 end
 --------------------------------------------
@@ -41,7 +41,7 @@ end
 function Sin:freq(frequency)
   self.delta = (2*math.pi*frequency)/self.samplerate
 end
-function Sin:Process(params)
+function Sin:Process(phase)
   self.phase=self.phase+self.delta
   while self.phase>2*math.pi do self.phase=self.phase-2*math.pi end
   return math.sin(self.phase)*self.amp
@@ -285,6 +285,15 @@ function Metro:Process(params)
   return now
 end
 function Metro:Pat(pat,handler,start,stop)
+  if stop==nil then
+    if start==nil then
+      start=math.ceil(self.time)
+      stop=math.ceil(self.time+1)
+    else
+      stop=math.ceil(self.time)+start
+      start=math.ceil(self.time)
+    end
+  end
   local function close(value)
     return function(start,stop)
       handler(value,start,stop)
@@ -355,6 +364,7 @@ function Sampler.new(params)
   o.grainxfade=1
   o.basenote=60
   o.amp=o.amp or 1
+  o.env=o.env or nil
   if o.offset~=nil then Sampler.offset(o,o.offset); o.offset=nil end
   if o.duration~=nil then Sampler.duration(o,o.duration); o.duration=nil end
   if o.grainDuration~=nil then Sampler.grainDuration(o,o.grainDuration); o.grainDuration=nil end
@@ -363,6 +373,10 @@ function Sampler.new(params)
 end
 function Sampler:offset(offset)
    self.sindex=self.sample.frames*offset
+   if self.grain1start==0 and self.grain2start==0 then
+      self.grain1start=self.sindex
+      self.grain2start=self.sindex
+   end
 end
 function Sampler:duration(dur)
    local seconds=self.sample.frames/self.samplerate
@@ -373,9 +387,14 @@ function Sampler:grainDuration(dur)
 end
 function Sampler:Process()
   local out={}
+  local env=1
+  if self.env~=nil then
+     env=self.env:Process()
+     if self.env.phase==-1 then self.free=true end
+  end
   for i=1,self.sample.channels do out[i]=0 end
-  if self.loop==false and self.sindex>self.sample.frames then
-     self.free=true
+  if (self.loop==false and (self.sindex>self.sample.frames or self.sindex<0)) or self.free==true then
+    self.free=true
     return unpack(out)
   end
   if self.grainwindex >= self.grainsize then
@@ -392,7 +411,7 @@ function Sampler:Process()
     local window1=math.cos(math.pi*0.5*self.grainwindex/self.grainsize)
     local window2=math.sin(math.pi*0.5*self.grainwindex/self.grainsize)
     out[i]=grain1channels[i]*window1+grain2channels[i]*window2
-    out[i]=out[i]*self.grainxfade+nofx[i]*(1-self.grainxfade)
+    out[i]=(out[i]*self.grainxfade+nofx[i]*(1-self.grainxfade))*env
   end
   self.grain1sindex=self.grain1sindex+1*self.pitch
   self.grain2sindex=self.grain2sindex+1*self.pitch
@@ -447,6 +466,7 @@ function Env.new(params)
 end
 function Env:Reset()
   self.phase=0
+  return self
 end
 function Env:Process(samplerate)
   local i=1
@@ -755,7 +775,9 @@ function FMVoice:Process()
   self.carrier{freq=self.freq+math.atan(self.modulator:Process(sr)*self.modShape)*self.modAmp*env}
   return math.atan(self.carrier:Process(sr)*self.carrierShape)*env
 end
---------------------------------------------
+----------------------------------------------------------------
+-- TODO: Make methods functionalish/idempotent with deep copy --
+----------------------------------------------------------------
 Pat={}
 setmetatable(Pat, {__call = function (cls, ...) return cls.new(...) end,})
 Pat.__index=function(t,k)
@@ -775,11 +797,11 @@ end
 function Pat.new(t)
   local o={}
   setmetatable(o,Pat)
-  o.t=t.t or {}
+  o.t={}
   o.cycles=t.cycles or 1
   o.offset=t.offset or 0
   o.parallel=t.parallel or false
-  for i=1,#t do
+  for i=1,#(t.t or t) do
     if type(t[i])=='table' then
       o.t[i]=Pat(t[i])
     else
@@ -860,11 +882,11 @@ function Pat.GenBjorkStructure(size,selects)
 end
 function Pat:BjorkSelect(select)
   local selectIndex,selectPattern,outPattern
-  selectIndex=1
-  selectPattern=Pat.GenBjork(select,Pat.Sum(self))
   outPattern=Pat.new(self)
   outPattern.t={}
   for i=1,#self.t do outPattern[i]=self[i] end
+  selectIndex=1
+  selectPattern=Pat.GenBjork(select,Pat.Sum(self:Apply(function(x) if x>0 then return 1 else return 0 end end)))
   for i=1,#outPattern.t do
     if outPattern[i]>0 then
       outPattern[i]=outPattern[i]*selectPattern[selectIndex]
@@ -873,20 +895,88 @@ function Pat:BjorkSelect(select)
   end
   return outPattern
 end
+function Pat:Select(select)
+   local ret=Pat(self);ret.t={}
+   for i=1,#self.t do
+      if Pat.WrapAt(select,i)>0 then
+	 ret[#ret.t+1]=self[i]
+      end
+   end
+   return ret
+end
+function Pat:Mask(select)
+   local ret=Pat(self);ret.t={}
+   for i=1,#self.t do
+      if Pat.WrapAt(select,i)>0 then
+	 ret[#ret.t+1]=self[i]
+      else
+	 ret[#ret.t+1]=Pat{}
+      end
+   end
+   return ret
+end
+function Pat:SuperMask(select)
+   local ret=Pat(self);ret.t={}
+   local selecti=1
+   for i=1,#self.t do
+      if Pat.WrapAt(select,selecti)>0 then
+	 ret[#ret.t+1]=self[i]
+      else
+	 ret[#ret.t+1]=Pat{}
+      end
+      if not(type(self[i])=='table' and #self[i].t<1) then selecti=selecti+1 end
+   end
+   return ret
+end
+function Pat:RemoveAt(index)
+  local ret=Pat(self)
+  local len=#(ret.t or ret)
+  while index<1 do index=index+len end
+  local remIndex=((index-1)%len)+1
+  table.remove(ret.t,remIndex)
+  return ret
+end
 function Pat:WrapAt(index)
-  local len=0
-  if self.t==nil then len=#self else len=#self.t end
+  local len=#(self.t or self)
+  while index<1 do index=index+len end
   local out=self[((index-1)%len)+1]
   if type(out)=='table' then
-    return Pat(out)
+     return Pat(out)
   else
-    return out
+     return out
   end
 end
 function Pat:SelectRange(from,to)
   local ret=Pat(self);ret.t={}
   for i=from,to,1 do ret.t[#ret.t+1]=self.t[i] end
   return ret
+end
+function Pat:Clump(n)
+   local ret=Pat{}
+   local i=1
+   n=math.max(n,1)
+   while i<=#self.t do
+      ret[#ret.t+1]=self:SelectRange(i,math.min(i+n-1,#self.t))
+      i=i+n
+   end
+   return ret
+end
+function Pat:Flatter()
+   local ret=Pat(self);ret.t={}
+   for i=1,#self.t do
+      ret=ret..self[i]
+   end
+   return ret
+end
+function Pat:Shuffle(f)
+   local ret=Pat(self);ret.t={}
+   local rem=Pat(self)
+   for i=1,#self.t do
+      local index=f(i)
+      ret[i]=rem:WrapAt(index)
+      rem=rem:RemoveAt(index)
+   end
+   return ret
 end
 function Pat:Sum()
   local sum=0
@@ -1141,7 +1231,7 @@ function Pat:__tostring()
       local separator=' '
       if i==1 then separator='' end
       if type(t[i])=='table' and #t[i]<1 and #t[i].t<1 then
-        out=out..separator..'.'
+        out=out..separator..'_'
       else
         out=out..separator..tostring(t[i])
       end
@@ -1177,3 +1267,5 @@ end
 function Pat.__unm(self)
   return Pat.combine(0,self,function(a,b) return a-b end)
 end
+P=Pat
+_=P{}

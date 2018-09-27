@@ -1,0 +1,47 @@
+require 'cybin'
+oscs=8
+oscvals={}
+function makeOscVals(osc,base,mod,last)
+   return {osc=osc,base=base,mod=mod,last=last}
+end
+
+a=P.GenBjorkStructure(64,{32,20,8,5,2,1})
+inc=1
+m=Metro()
+m(function()
+      local hmm=a:WrapAt(inc)/6
+      inc=inc+1
+      for i=1,oscs do
+	 oscvals[i]=makeOscVals(
+	    Sin{freq=100,delta=math.random()*3.145},
+	    (hmm*400+50)*math.pow(1+math.pow(hmm,1.5)*0.3,i),
+	    (math.pow(hmm,2)*200+50)*math.pow(1+math.pow(hmm,3)*0.3,i),
+	    0)
+      end
+      env=Env{values={0,1,0},durations={0.005,0.5*math.pow(0.5,hmm+1)}}
+      env{}
+      return 0.5/math.pow(2,math.floor(math.pow(math.random(),0.3)*3))
+end)
+
+rl=Reverb2{}
+rr=Reverb2{}
+function __process()
+   m:Process()
+   l=0
+   r=0
+   local env=env:Process()
+   for i=1,#oscvals do
+      lastIndex=i-1
+      if lastIndex<1 then lastIndex=lastIndex+#oscvals end
+      oscvals[i].osc{freq=oscvals[lastIndex].last*oscvals[i].mod+oscvals[i].base}
+      oscvals[i].last=math.atan(oscvals[i].osc:Process()*1.2)*math.pow(env,2)
+      if i%2==0 then
+	 l=l+oscvals[i].last/#oscvals
+      else
+	 r=r+oscvals[i].last/#oscvals
+      end
+   end
+   l=l*env
+   r=r*env
+   return rl:Process(l)+l,rr:Process(r)+r
+end
