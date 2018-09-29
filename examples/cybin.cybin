@@ -783,7 +783,7 @@ function Pluck.new(params)
    local o=UGen.new(params)
    o.samplerate=o.samplerate or cybin.samplerate or 48000
    o.freq=o.freq or 220
-   o.harmonic=3.93
+   o.harmonic=o.harmonic or 3.93
    o.coef=o.coef or 0.9
    o.cutoff=o.cutoff or o.samplerate*0.25
    o.reso=o.reso or 1
@@ -797,6 +797,7 @@ function Pluck.new(params)
 end
 function Pluck:Process()
    local env=math.pow(self.env:Process(),10)
+   if self.env.phase==-1 then self.free=true end
    self.filter{freq=env*self.cutoff+100,reso=self.reso}
    return self.filter:Process(self.comb:Process(self.osc:Process()))*env
 end
