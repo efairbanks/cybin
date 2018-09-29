@@ -775,6 +775,68 @@ function FMVoice:Process()
   self.carrier{freq=self.freq+math.atan(self.modulator:Process(sr)*self.modShape)*self.modAmp*env}
   return math.atan(self.carrier:Process(sr)*self.carrierShape)*env
 end
+--------------------------------------------
+Pluck={__call=function(self,...) return self:Set(...) end}
+Pluck.__index=Pluck
+setmetatable(Pluck,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+function Pluck.new(params)
+   local o=UGen.new(params)
+   o.samplerate=o.samplerate or cybin.samplerate or 48000
+   o.freq=o.freq or 220
+   o.harmonic=3.93
+   o.coef=o.coef or 0.9
+   o.cutoff=o.cutoff or o.samplerate*0.25
+   o.reso=o.reso or 1
+   o.osc=Saw{freq=o.freq} or o.osc
+   o.env=o.env or Env{values=o.values or {0,1,0},durations=o.durations or {0.01,0.4}}
+   o.env{}
+   o.filter=o.filter or Filter{filterType='lowpass',freq=o.cutoff,reso=o.reso}
+   o.comb=Comb{delay=1/(o.freq*o.harmonic),coef=o.coef}
+   setmetatable(o,Pluck)
+   return o
+end
+function Pluck:Process()
+   local env=math.pow(self.env:Process(),10)
+   self.filter{freq=env*self.cutoff+100,reso=self.reso}
+   return self.filter:Process(self.comb:Process(self.osc:Process()))*env
+end
+--------------------------------------------
+Fring={__call=function(self,...) return self:Set(...) end}
+Fring.__index=Fring
+setmetatable(Fring,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+function Fring.new(params)
+   local o=UGen.new(params)
+   o.env=o.env or Env{values=o.values or {0,1,0},durations=o.durations or {0.01,0.5}}
+   o.env:Reset()
+   o.modf=o.modf or function(x) return math.random(50,5000) end
+   o.basef=o.basef or function(x) return math.random(50,5000) end
+   o.pitch=o.pitch or 1
+   o.drive=o.drive or 2
+   o.nodes=o.nodes or 8
+   o.oscs={}
+   o.lasts={}
+   for i=1,o.nodes do
+      o.lasts[i]=math.random()*2-1
+      o.oscs[i]=Sin{freq=o.basef(i),phase=math.random()*2*math.pi}
+   end
+   setmetatable(o,Fring)
+   return o
+end
+function Fring:Process(input)
+   input=math.atan(input or 0)
+   local out=0
+   local env=self.env:Process()
+   if self.env.phase==-1 then self.free=true end
+   for i=1,self.nodes do
+      local lastIndex=i-1
+      if lastIndex<1 then lastIndex=lastIndex+self.nodes end
+      self.oscs[i]{freq=(self.lasts[lastIndex]*self.modf(i)+self.basef(i))*self.pitch}
+      self.lasts[i]=(math.atan(self.oscs[i]:Process()*self.drive)+input)*math.pow(env,2)
+      out=out+self.lasts[i]
+   end
+   self.last=out*math.pow(env,2)/self.nodes
+   return self.last
+end
 ----------------------------------------------------------------
 -- TODO: Make methods functionalish/idempotent with deep copy --
 ----------------------------------------------------------------
