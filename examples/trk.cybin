@@ -1,0 +1,16 @@
+require 'cybin'
+cybin.loadfragmentshaderfile('trk.frag')
+paramid=cybin.getuniformid('param')
+param=0
+frames=0
+p=Poly{voice=Pluck,maxVoices=3}
+r=Reverb2{coef=0.5,damp=0.9,echoDuration=0.234}
+function __process()
+   local out=p:Process()
+   out=r:Process(out)*0.3
+   local coef=0.999
+   param=math.atan(param*coef+math.abs(out)*(1-coef))
+   if frames%500==0 then frames=0; cybin.setuniform1f(paramid,param); end
+   return out,out
+end
+p{durations={0.2,4},harmonic=.51+math.random()*0.1,coef=0.999,freq=20*math.random(1,10),cutoff=2000}
