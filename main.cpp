@@ -24,6 +24,8 @@ struct{
   char* outfile;
   char* loadfile;
   int fps;
+  int render_width;
+  int render_height;
 } Config;
 typedef struct{
   char COMMAND_BUFFER[1048576];
@@ -39,6 +41,8 @@ void parse_args(int argc, char** argv){
   Config.outfile="cybin.wav";
   Config.loadfile=NULL;
   Config.fps=25;
+  Config.render_width=400;
+  Config.render_height=300;
   for(int i=1;i<argc;i++){
     char* currentArg=argv[i];
     if(strcmp("--offline",currentArg)==0){
@@ -63,9 +67,12 @@ void parse_args(int argc, char** argv){
     } else if(strcmp("--set-device",currentArg)==0){
       i++;currentArg=argv[i];
       Config.set_device=atoi(currentArg);
-    } else if(strcmp("--fps",currentArg)==0){
+    } else if(strcmp("--render-width",currentArg)==0){
       i++;currentArg=argv[i];
-      Config.fps=atoi(currentArg);
+      Config.render_width=atoi(currentArg);
+    } else if(strcmp("--render-height",currentArg)==0){
+      i++;currentArg=argv[i];
+      Config.render_height=atoi(currentArg);
     } else {
       Config.loadfile=currentArg;
     }
@@ -177,6 +184,8 @@ int main(int argc, char** argv){
   Interpreter::LoadFunction("setuniform4f",cybin_setuniform4f);
   // --- Configure environment --- //
   parse_args(argc,argv);
+  Frag::_width=Config.render_width;
+  Frag::_height=Config.render_height;
   if(Config.offline) {   // --- OFFLINE RENDERING ---- //
     Interpreter::LoadNumber("samplerate",Config.samplerate);
     Interpreter::LoadNumber("channels",Config.channels);
@@ -211,7 +220,10 @@ int main(int argc, char** argv){
       if(Frag::_initialized){
       char cmd[1024];
       sprintf(cmd,"ffmpeg -y -r %d -i %s_%s -i %s -c:v libx264 -c:a aac -pix_fmt yuv420p %s.mp4",Config.fps,Config.outfile,"%08d.tga",Config.outfile,Config.outfile);
-      if(system(cmd)==0) system("rm *.tga");
+      if(system(cmd)==0) {
+	sprintf(cmd,"rm %s_*.tga",Config.outfile);
+	system(cmd);
+      }
     }
   } else {        // --- REALTIME RENDERING --- //
     // --- Continue startup --- //

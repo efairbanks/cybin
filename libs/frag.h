@@ -73,6 +73,7 @@ class Frag{
         _display=display==NULL?_default_display:display;
         _timer=timer==NULL?_default_timer:timer;
         glutInit(&argc, argv);
+        glutInitWindowSize(_width,_height);
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
         _uniform_resolution=-1;
         _uniform_time=-1;

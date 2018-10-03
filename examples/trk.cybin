@@ -3,14 +3,23 @@ cybin.loadfragmentshaderfile('trk.frag')
 paramid=cybin.getuniformid('param')
 param=0
 frames=0
-p=Poly{voice=Pluck,maxVoices=3}
+p=Poly{voice=Pluck,maxVoices=10}
 r=Reverb2{coef=0.5,damp=0.9,echoDuration=0.234}
+m=Metro()
+f=Filter{filterType='bandpass',freq=200}
 function __process()
+   m:Process()
    local out=p:Process()
+   out=f:Process(out)
    out=r:Process(out)*0.3
    local coef=0.999
-   param=math.atan(param*coef+math.abs(out)*(1-coef))
-   if frames%500==0 then frames=0; cybin.setuniform1f(paramid,param); end
+   param=math.atan(param*coef+math.abs(out)*(1-coef)*4)
+   if frames%50==0 then frames=0; cybin.setuniform1f(paramid,param); end
    return out,out
 end
-p{durations={0.2,4},harmonic=.51+math.random()*0.1,coef=0.999,freq=20*math.random(1,10),cutoff=2000}
+
+m(P{1,2,3,4,5,6,7}:Fast(2)*1,
+  function(x,s,e)
+     p{freq=math.min(100*math.pow(4/3,x),cybin.samplerate/2),harmonic=2.3};
+     f{freq=math.min(200*x,cybin.samplerate/2),reso=3}
+  end,0.5)
