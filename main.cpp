@@ -158,6 +158,39 @@ int cybin_setuniform4f(lua_State* L){
   if(uniformid>=0) glUniform4f(uniformid,uniformvalue1,uniformvalue2,uniformvalue3,uniformvalue4);
   return 0;
 }
+int cybin_settexture(lua_State *L){
+  if(lua_isnil(L,1)) return 0;
+  int uniformid = lua_tonumber(L,1);
+  int textureoffset = lua_tonumber(L,2);
+  int width = lua_tonumber(L,3);
+  int height = lua_tonumber(L,4);
+  if(uniformid>=0) {
+    unsigned int texture;
+    glEnable(GL_TEXTURE_2D);
+    glActiveTexture(GL_TEXTURE0+textureoffset);
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    // set the texture wrapping/filtering options (on the currently bound texture object)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);  
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    int channels=3;
+    unsigned char *data = (unsigned char*)malloc(sizeof(char)*width*height*channels);
+    if (data) {
+      for(int i=0;i<width*height*channels;i++) {
+        lua_rawgeti(L,5,i+1);
+        data[i]=lua_tonumber(L,-1);
+        lua_pop(L,1);
+      }
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+      glGenerateMipmap(GL_TEXTURE_2D);
+      free(data);
+    }
+    glUniform1i(uniformid,textureoffset);
+  }
+  return 0;
+}
 void* input_handler(void* data){
   SharedInput* input=(SharedInput*)data;
   // input handlng thread
@@ -182,6 +215,7 @@ int main(int argc, char** argv){
   Interpreter::LoadFunction("setuniform2f",cybin_setuniform2f);
   Interpreter::LoadFunction("setuniform3f",cybin_setuniform3f);
   Interpreter::LoadFunction("setuniform4f",cybin_setuniform4f);
+  Interpreter::LoadFunction("settexture",cybin_settexture);
   // --- Configure environment --- //
   parse_args(argc,argv);
   Frag::_width=Config.render_width;
@@ -216,13 +250,13 @@ int main(int argc, char** argv){
     }
     AudioFile file(buffer,int(Config.duration*Config.samplerate),Config.channels,Config.samplerate);
     file.Write(Config.outfile);
-      printf("\n%s Wrote audio to %s\n",CYBIN_PROMPT,Config.outfile);
-      if(Frag::_initialized){
+    printf("\n%s Wrote audio to %s\n",CYBIN_PROMPT,Config.outfile);
+    if(Frag::_initialized){
       char cmd[1024];
       sprintf(cmd,"ffmpeg -y -r %d -i %s_%s -i %s -c:v libx264 -c:a aac -pix_fmt yuv420p %s.mp4",Config.fps,Config.outfile,"%08d.tga",Config.outfile,Config.outfile);
       if(system(cmd)==0) {
-	sprintf(cmd,"rm %s_*.tga",Config.outfile);
-	system(cmd);
+        sprintf(cmd,"rm %s_*.tga",Config.outfile);
+        system(cmd);
       }
     }
   } else {        // --- REALTIME RENDERING --- //

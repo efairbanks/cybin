@@ -1,0 +1,8 @@
+dofile('../cybin.cybin')
+cybin.loadfragmentshaderfile("textest.frag")
+tex1=cybin.getuniformid("tex0")
+w=300
+h=200
+img={}
+for i=1,w*h*3 do img[i]=i%255 end
+cybin.settexture(tex1,0,w,h,img)
