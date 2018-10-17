@@ -34,6 +34,6 @@ float march(vec3 o, vec3 r){
 void main(void) {
   vec2 p = (gl_FragCoord.xy / resolution.xy)-.5;
   vec3 col=texture2D(tex0,gl_FragCoord.xy*2./resolution.xy).rgb;
-  col=texture2D(tex0,p*10.).rgb;
+  col=texture2D(tex0,p+0.5).rgb;
   gl_FragColor = vec4(col, 1.0);
 }

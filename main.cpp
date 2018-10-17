@@ -73,6 +73,9 @@ void parse_args(int argc, char** argv){
     } else if(strcmp("--render-height",currentArg)==0){
       i++;currentArg=argv[i];
       Config.render_height=atoi(currentArg);
+    } else if(strcmp("--fps",currentArg)==0){
+      i++;currentArg=argv[i];
+      Config.fps=atoi(currentArg);
     } else {
       Config.loadfile=currentArg;
     }
