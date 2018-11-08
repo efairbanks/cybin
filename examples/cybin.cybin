@@ -1200,7 +1200,7 @@ function Pat:Offset(x)
    return ret
 end
 function Pat:Apply(f)
-  for i=1,#self.t do
+  for i=1,#(self.t or self) do
     local value=self.t[i]
     if type(value)=='table' then
       self.t[i]=value:Apply(f)

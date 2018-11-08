@@ -226,6 +226,7 @@ int main(int argc, char** argv){
   if(Config.offline) {   // --- OFFLINE RENDERING ---- //
     Interpreter::LoadNumber("samplerate",Config.samplerate);
     Interpreter::LoadNumber("channels",Config.channels);
+    Interpreter::LoadBool("offline",Config.offline);
     if(Config.loadfile!=NULL) Interpreter::LoadFile(Config.loadfile);
     printf("Rendering %f seconds of %d-channel audio to %s at %dHz",Config.duration,Config.channels,Config.outfile,Config.samplerate);
     int frames=int(Config.duration*Config.samplerate);

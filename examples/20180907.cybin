@@ -1,3 +1,7 @@
+--[[
+dofile('20180907.cybin')
+--]]
+
 require 'cybin'
 P=Pat
 _=P{}
@@ -93,7 +97,7 @@ function verse_b(t)
      function(x,s,e) _gltchL(s-x,e-x); _gltchR(s-x,e-x) end,t,t+1)
 end
 
---m.time=51+10
+--m.time=64
 function verse_a(t) m(P.GenBjorkStructure(13,{3,1}):Slow(13),function(x,s,e) P{a_,b_,c_}:WrapAt(x+1)(s,e) end,t,t+1) end
 function intro(t) percamp=0; verse_a(t); end
 function bridge_a(t,s)
@@ -102,8 +106,13 @@ function bridge_a(t,s)
    c_(t,t+1,23,{14,10,7,5,4},{1,8,2,12,4},{sexp,0.5})
 end
 
+--[[
+dofile('20180907.cybin')
+--]]
+
 glitchterp=0.5
 function play(t)
+   --print(t)
    if t<28 then
       intro(t)
    elseif t<51 then
@@ -115,14 +124,62 @@ function play(t)
    elseif t<51+14 then
       sinenv=Env{durations={20},values={0.5,1.8}}; sinenv{};
       m(P.GenDup(1,10):Integrate(),function(x,s,e) perc{sample=samps[2],speed=0.01*math.pow(2,x),amp=1*x/4} end,t,t+1)
-   else
+   elseif t<77 then
       scoef=500
       if t<51+15 then sinenv=Env{durations={500},values={1.01,0.5}}; sinenv{}; perc{sample=samps[2],speed=1/5,pitch=1.5}; gabba{sample=gabbasamp} end
       c_(t,t+1,23,{14,10,7,5,4,8,6},{1,8,2,12,4},{1.+.85/(t-(51+13)),1})
       m(P.GenBjorkStructure(23,{17,13,9,5,3}):__div(5):__sub(0.5):__mul(1):__pow(2):__add(0.5):Slow(23/4),function(x,s,e) glitchterp=x end,t,t+1)
       verse_b(t)
+   elseif t<77+11 then
+      if math.floor(t)==78 then
+	 scoef=0
+	 glitchR{sample=glitchsamp,speed=0.01,grainDuration=0.03,offset=1/16}
+	 glitchL{sample=glitchsamp,speed=0.01,grainDuration=0.02,offset=1/16}
+      end
+      _kcspitch=math.max(1.,10/(t-77))
+      _kcsspeed=math.min(1.,(t-77)/10)
+      verse_a(t)
+   elseif t<77+11+20 then
+      if math.floor(t)==77+11 then
+	 glitchR.voices={}
+	 glitchL.voices={}
+	 perc.voices={}
+      end
+      _kcspitch=1
+      _kcsspeed=1
+      --scoef=P{400,1000,700,2000,100}:WrapAt(math.floor(t/3))
+      scoef=50
+      c_(t,t+1,23,{14,10,7,5,4,8,6},{1,8,2,12,4},{2,1})
+      verse_a(t)
+   else
+      if math.floor(t)==77+11+20 then
+	 scoef=200
+	 sinenv=Env{durations={32},values={2,1.5}}; sinenv{}
+	 perc.voices={}
+	 perc{sample=samps[2],pitch=5,speed=0.1}
+      else
+	 scoef=0
+	 m(P.GenDup(0,16),function(x,s,e)
+	      local cyc=s-(77+11+20)
+	      _kcspitch=math.max(1,cyc/4)
+	      _kcsspeed=math.min(1,5/cyc)
+			 end,t,t+1)
+	 verse_a(t)
+      end
    end
+   if t>77+11+20 then m.cps=m.cps*1.03 else m.cps=1 end
 end
+--m.time=77+7
+
+--[[
+dofile('20180907.cybin');m.time=77+11+19
+--]]
+
+--[[
+function c_(s,e,len,struct,durs,vals)
+   _sperc(s,e,len or 23,struct or {14,10,7,5,4},durs or {1,8,2,12,4},vals or {1.6,0.5})
+end
+--]]
 
 compL=Compressor{threshold=-20,ratio=2,attack=0.005,release=0.03,makeup=5}
 compR=Compressor{threshold=-20,ratio=2,attack=0.005,release=0.03,makeup=5}
@@ -147,6 +204,10 @@ function __process()
    local outR=compR:Process(out+(glitchR*glitchterp+glitchL*(1-glitchterp)))
    return outL,outR
 end
+
+--[[
+dofile('20180907.cybin')
+--]]
 
 --[[
 cybin.loadfragmentshaderfile('20180907.frag')

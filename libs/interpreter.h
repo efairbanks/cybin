@@ -64,6 +64,13 @@ class Interpreter{
     lua_settable(__L,-3);
     lua_pop(__L,1);
   }
+  static void LoadBool(char* name, int boolean){
+    lua_getglobal(__L,"cybin");
+    lua_pushstring(__L,name);
+    lua_pushboolean(__L,boolean);
+    lua_settable(__L,-3);
+    lua_pop(__L,1);
+  }
   static void EventLoop(char* buff){
     int error = luaL_loadbuffer(__L, buff, strlen(buff), "line") ||
       lua_pcall(__L,0,0,0);

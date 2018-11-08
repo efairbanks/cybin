@@ -1,0 +1,48 @@
+require 'cybin'
+
+s=Poly{voice=Pluck,maxVoices=12}
+m=Metro()
+
+function __process()
+   m:Process()
+   local out=s:Process()
+   out=out*0.01
+   return out,out
+end
+
+pitch=P{0}
+maj=P{0,4,7}
+min=P{0,3,7}
+chord=maj
+jt={
+   [1]=function() pitch=(pitch+7)%12 end,
+   [2]=function() pitch=(pitch+5)%12 end,
+   [3]=function() pitch=(pitch+chord[2])%12; if chord==maj then chord=min else chord=maj end end,
+      [4]=function() if chord==maj then chord=min else chord=maj end pitch=(pitch+(12-chord[2]))%12 end}
+jti=1
+
+beat=0
+function play()
+   if beat%4==0 then
+      jt[P{1,3}:WrapAt(jti)]()
+      jti=jti+1
+   end
+   beat=beat+1;
+   print(pitch+chord);
+   (pitch+chord)
+      :EdoPitch2Freq()
+      :Apply(
+	 function(x)
+	    s{freq=x*4,durations={0.01,4}}
+	    s{freq=x*16,durations={0.01,1}}
+	    end)
+   return .25
+end
+
+m('play')
+
+print(pitch+chord)
+
+--[[
+dofile('neor.cybin')
+--]]
