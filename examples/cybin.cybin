@@ -44,7 +44,7 @@ end
 function Sin:Process(phase)
   self.phase=self.phase+self.delta
   while self.phase>2*math.pi do self.phase=self.phase-2*math.pi end
-  return math.sin(self.phase)*self.amp
+  return math.sin(self.phase+(phase or 0))*self.amp
 end
 --------------------------------------------
 Pulse={__call=function(self,...) return self:Set(...) end}
@@ -55,9 +55,9 @@ function Pulse.new(params)
   o.samplerate = o.samplerate or cybin.samplerate or 48000
   o.phase = o.phase or 0
   o.delta = o.delta or (o.freq or 440)/o.samplerate
-  o.freq=nil
+  o.freq = nil
   o.amp = o.amp or 1
-  o.width = 0.5
+  o.width = o.width or 0.5
   setmetatable(o,Pulse)
   return o
 end
@@ -603,8 +603,8 @@ function Allpass.new(params)
   setmetatable(o,Allpass)
   return o
 end
-function Allpass:Process(input)
-  local output=input*self.coef+self.buf[self.index]
+function Allpass:Process(input,sampleOffset)
+  local output=input*self.coef+self.buf[self.index+(sampleOffset or 0)]
   self.buf[self.index]=input+output*-self.coef
   self.index=self.index+1
   while self.index>self.size do self.index=self.index-self.size end
@@ -626,8 +626,8 @@ function Comb.new(params)
   setmetatable(o,Comb)
   return o
 end
-function Comb:Process(input)
-  self.buf[self.index]=input+self.buf[self.index]*self.coef
+function Comb:Process(input,sampleOffset)
+  self.buf[self.index]=input+self.buf[self.index+(sampleOffset or 0)]*self.coef
   local output=self.buf[self.index]
   self.index=self.index+1
   while self.index>self.size do self.index=self.index-self.size end
@@ -648,8 +648,8 @@ function Delay.new(params)
   setmetatable(o,Delay)
   return o
 end
-function Delay:Process(input)
-  local output=self.buf[self.index]
+function Delay:Process(input,sampleOffset)
+  local output=self.buf[self.index+(sampleOffset or 0)]
   self.buf[self.index]=input
   self.index=self.index+1
   while self.index>self.size do self.index=self.index-self.size end
@@ -1212,6 +1212,13 @@ function Pat:Apply(f)
 end
 function Pat:MapValues(f) -- backwards compatibilty
   return self:Apply(f)
+end
+function Pat:Map(f)
+   local ret=Pat.new(self)
+   for i=1,#(ret.t or ret) do
+      ret.t[i]=f(ret.t[i],i)
+   end
+   return ret
 end
 function Pat:Max(func)
   local ret=self[1]

@@ -1,0 +1,12 @@
+require 'cybin'
+s=Sin{freq=55}
+t=Sin{freq=55}
+m=Sin{freq=0.2}
+c=Allpass{}
+function __process()
+   local dry = math.atan(s:Process()*40)
+   local out = c:Process(dry,(t:Process()+1)*(m:Process()+1)*1500)
+   return out,dry
+end
+
+--__process=nil
