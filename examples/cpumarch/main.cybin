@@ -1,0 +1,122 @@
+dofile('../cybin.cybin')
+
+vec3 = require('vec3')
+function vec3.reflect(i,n)
+   return (i-vec3(2*vec3.dot(n,i))*n):normalize()
+end
+
+function union(a,b)
+   if a[1]<b[1] then return a else return b end 
+end
+
+function map(pos)
+   pos.y=math.abs(pos.y)-.7
+   pos.x=math.sin(pos.x*1.1)
+   return unpack(union(
+      {pos:len()-1.1,vec3(2),vec3(1)},
+      {(pos-vec3(-1,0.4,-2)*0.8):len()-0.2,vec3(5),vec3(1)}
+   ))
+end
+--[[
+dofile('main.cybin')
+--]]
+
+maxdist=5
+
+function march(origin,dir)
+   local trav=0
+   for i=0,20 do
+      local dist,lum,ref=map(dir*trav+origin)
+      trav=trav+dist
+      if dist<0.01 then return trav,lum,ref end
+      if dist>=maxdist then break end
+      trav=trav-dist*0.1 --step back to eliminate error
+   end
+   return maxdist,0,1
+end
+function pantilt(origin,target,x,y)
+   forward = (target-origin):normalize()
+   right = vec3.cross(vec3(0,1,0),forward):normalize()
+   up = vec3.cross(forward,right):normalize()
+   return (forward+right*x+up*y):normalize()
+end
+function gradient(p)
+   local e=0.001
+   function x(x) local result = map(x); return result end
+   return vec3(x(p+vec3(e,0,0))-x(p-vec3(e,0,0)),
+	       x(p+vec3(0,e,0))-x(p-vec3(0,e,0)),
+	       x(p+vec3(0,0,e))-x(p-vec3(0,0,e))):normalize()
+end
+
+--[[
+dofile('main.cybin')
+--]]
+
+function look(origin,dir)
+   local o,d = origin,dir
+   local tdist,tlum,tref = 0,vec3(0),vec3(1)
+   for i=0,5 do
+      local dist,lum,ref = march(o,d)
+      if dist>=maxdist then break end
+      tdist=tdist+dist
+      tlum=tlum+tref*lum/math.pow(2,tdist)
+      tref=tref*ref
+      if tref:len()<=0 then break end
+      o=o+d*(dist-0.1)
+      d=vec3.reflect(d:normalize(),gradient(o))
+   end
+   return tlum
+end
+
+
+frag=[[
+uniform vec2 resolution;
+uniform float time;
+uniform sampler2D tex;
+void main(void){
+ vec2 p = (gl_FragCoord.xy/resolution.xy)-.5;
+ vec3 col=texture2D(tex,gl_FragCoord.xy*2./resolution.xy).rgb;
+ col=texture2D(tex,p+.5).rgb;
+ gl_FragColor=vec4(col,1.);
+}
+]]
+cybin.loadfragmentshader(frag)
+w=240
+h=240
+img={}
+
+--[[
+dofile('main.cybin')
+--]]
+
+function getPixelAA(camera,target,x,y,w,h)
+   local nsamples=10
+   local acc=vec3(0)
+   for i=0,nsamples do
+      local randx=math.random()-.5
+      local randy=math.random()-.5
+      acc=acc+look(camera,pantilt(camera,target,(x+randx)/w-0.5,(y+randy)/h-0.5))
+   end
+   return acc/nsamples
+end
+
+for i=0,w do
+   for j=0,h do
+      local index=i+j*w
+      local val = getPixelAA(vec3(0,-2,-4),vec3(0),i,j,w,h)*255
+      img[index*3+1]=val.x
+      img[index*3+2]=val.y
+      img[index*3+3]=val.z
+   end
+end
+tex=cybin.getuniformid('tex')
+cybin.settexture(tex,0,w,h,img)
+cybin.screendump('out.tga')
+
+--[[
+for i in pairs(cybin) do print(i) end
+--]]
+
+--[[
+dofile('main.cybin')
+--]]

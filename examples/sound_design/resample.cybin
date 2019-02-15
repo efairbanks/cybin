@@ -1,0 +1,19 @@
+dofile('../cybin.cybin')
+s=Sampler{sample='resample_11.wav'}
+s.pitch=2
+s.speed=1
+s:grainDuration(1/1000)
+s:offset(0.1)
+f1=Filter{freq=1000,reso=3,filterType='lowpass'}
+env1=Env{values={0,1,1,0},durations={0.1,3,0.1}}
+env1:Reset()
+r=Reverb2{coef=0.7,nodes=17}
+function __process()
+   local out=s:Process()
+   local env=env1:Process()
+   f1:freq(math.pow(env,3)*10000+10)
+   out=f1:Process(out)+out*env
+   out=math.atan(out*30)*0.1
+   --out=r:Process(out)
+   return out,out
+end

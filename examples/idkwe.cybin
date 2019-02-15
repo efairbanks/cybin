@@ -1,0 +1,29 @@
+require 'cybin'
+samples={
+   '/Users/ericfai/Google Drive/tidal_midi_harmony_tutorial/samples/jstkick/JUST_kick_box_boom.wav',
+   '/Users/ericfai/Google Drive/tidal_midi_harmony_tutorial/samples/jstsn/JUST_snare_rag.wav',
+   '/Users/ericfai/Google Drive/tidal_midi_harmony_tutorial/samples/varbass/WG_pluck_analog_C.wav',
+   '/Users/ericfai/Google Drive/tidal_midi_harmony_tutorial/samples/varbass/TFR_bass_chain_saw_02_C1.wav'
+}
+
+bass=Poly{voice=Pluck,maxVoices=5}
+
+bass{sample=samples[4],speed=0.05,grainDuration=1/10,pitch=.9*6}
+
+print(bass.maxVoices)
+
+bass{freq=50,coef=0.1,cutoff=2000,reso=0.5}
+
+
+
+osc=Pulse{width=0.001}
+osc:freq(50)
+
+function __process()
+   local out=bass:Process()
+   return out,out
+end
+
+hush=function() __process=nil end
+
+hush()

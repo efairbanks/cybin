@@ -15,6 +15,10 @@ env={}
 
 m.cps=1.4/2
 
+for i in pairs(cybin) do print(i) end
+
+--cybin.screendump('test.tga')
+
 function _k(t)
       m(
       P.GenBjork(8,13):Replace(0,_):Slow(13/8),

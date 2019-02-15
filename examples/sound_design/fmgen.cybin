@@ -1,0 +1,20 @@
+dofile('../cybin.cybin')
+FMGen={
+   mod=Sin{},
+   car=Sin{},
+   freq=100,
+   modFreq=150,
+   modAmount=5000,
+   lastVal=0,
+   Process=function(self)
+      self.mod:freq(self.modFreq+self.lastVal*100)
+      self.car:freq(self.freq+self.mod:Process()*self.modAmount)
+      local out=self.car:Process()
+      self.lastVal=out
+      return out
+   end
+}
+function __process()
+   local out=FMGen:Process()*0.1
+   return out,out
+end
