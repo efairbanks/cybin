@@ -48,7 +48,7 @@ class Audio{
     }
   }
   static void Init(float* (*callback)(float,int),int device_index){
-    // --- LibSndIo Setup --- //  
+    // --- LibSndIo Setup --- //
     _ringbuffer_size=AUDIO_H_DEFAULT_RINGBUFFER_SIZE;
     _ringbuffer=(float*)malloc(_ringbuffer_size*sizeof(float));
     _play_head=_ringbuffer_size/2;
@@ -71,7 +71,7 @@ class Audio{
     // --- LibSndIo Teardown --- //
     soundio_outstream_destroy(_audio_oustream);
     soundio_device_unref(_audio_device);
-    soundio_destroy(_audio_soundio);  
+    soundio_destroy(_audio_soundio);
   }
   static void EventLoop(){
     _audio_lock++;

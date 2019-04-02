@@ -13,10 +13,11 @@
 #define CYBIN_INIT "package.path=\"./?.cybin;\"..package.path;cybin={};"
 #define CYBIN_LOGOTEXT "      ___                                                 ___\n     /  /\\          ___        _____        ___          /__/\\\n    /  /:/         /__/|      /  /::\\      /  /\\         \\  \\:\\\n   /  /:/         |  |:|     /  /:/\\:\\    /  /:/          \\  \\:\\\n  /  /:/  ___     |  |:|    /  /:/~/::\\  /__/::\\      _____\\__\\:\\\n /__/:/  /  /\\  __|__|:|   /__/:/ /:/\\:| \\__\\/\\:\\__  /__/::::::::\\\n \\  \\:\\ /  /:/ /__/::::\\   \\  \\:\\/:/~/:/    \\  \\:\\/\\ \\  \\:\\~~\\~~\\/\n  \\  \\:\\  /:/     ~\\~~\\:\\   \\  \\::/ /:/      \\__\\::/  \\  \\:\\  ~~~\n   \\  \\:\\/:/        \\  \\:\\   \\  \\:\\/:/       /__/:/    \\  \\:\\\n    \\  \\::/          \\__\\/    \\  \\::/        \\__\\/      \\  \\:\\\n     \\__\\/                     \\__\\/                     \\__\\/\n"
 
-class Interpreter{
+class Interpreter {
   static lua_State* __L;
   public:
-  static float CHANNEL_DATA[256];
+  static float AUDIO_IN_CHANNEL_DATA[256];
+  static float AUDIO_OUT_CHANNEL_DATA[256];
   static void Init(){
     if(!__L){
       __L=luaL_newstate();
@@ -80,20 +81,19 @@ class Interpreter{
     }
     fprintf(stderr,"%s",CYBIN_PROMPT);
   }
-  static float* Process(float samplerate, int numOutChannels){
-    //return CHANNEL_DATA;
+  static float* Process(int numInChannels, int numOutChannels){
     int numLuaChannels=0;
     int outChannelIndex=0;
     int top=lua_gettop(__L);
     lua_getglobal(__L,"__process");
     if(lua_isfunction(__L, -1)){
-      lua_pushnumber(__L,samplerate);
-      switch(lua_pcall(__L,1,LUA_MULTRET,0)){
+      for(int i=0;i<numInChannels;i++) lua_pushnumber(__L,AUDIO_IN_CHANNEL_DATA[i]);
+      switch(lua_pcall(__L,numInChannels,LUA_MULTRET,0)){
         case LUA_ERRRUN:
           fprintf(stderr,"%s\nError: __process threw an unrecoverable error and has been reset.\n", lua_tostring(__L, -1));
           lua_pop(__L, 1);
           luaL_dostring(__L,"__process=nil");
-          return CHANNEL_DATA;
+          return AUDIO_OUT_CHANNEL_DATA;
         case LUA_ERRMEM:fprintf(stderr,"MEMORY ALLOCATION ERROR\n");return 0;
         case LUA_ERRERR:fprintf(stderr,"ERROR HANDLING ERROR\n");return 0;
         default:break;
@@ -101,18 +101,19 @@ class Interpreter{
       numLuaChannels=lua_gettop(__L)-top;
       for(int luaChannelIndex=0;luaChannelIndex<numLuaChannels;luaChannelIndex++){
         while(outChannelIndex>=numOutChannels) outChannelIndex-=numOutChannels;
-        CHANNEL_DATA[outChannelIndex]=lua_tonumber(__L,-1)+(luaChannelIndex>=numOutChannels?CHANNEL_DATA[outChannelIndex]:0);
+        AUDIO_OUT_CHANNEL_DATA[outChannelIndex]=lua_tonumber(__L,-1)+(luaChannelIndex>=numOutChannels?AUDIO_OUT_CHANNEL_DATA[outChannelIndex]:0);
         outChannelIndex++;
         lua_pop(__L,1);
       }
     } else lua_pop(__L,1);
-    return CHANNEL_DATA;
+    return AUDIO_OUT_CHANNEL_DATA;
   }
   static void Shutdown(){
     if(__L) lua_close(__L);
   }
 };
 lua_State* Interpreter::__L;
-float Interpreter::CHANNEL_DATA[256];
+float Interpreter::AUDIO_OUT_CHANNEL_DATA[256];
+float Interpreter::AUDIO_IN_CHANNEL_DATA[256];
 
 #endif
