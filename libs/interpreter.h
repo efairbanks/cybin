@@ -18,6 +18,8 @@ class Interpreter {
   public:
   static float AUDIO_IN_CHANNEL_DATA[256];
   static float AUDIO_OUT_CHANNEL_DATA[256];
+  static std::vector<MidiEvent*> MIDI_IN_DATA;
+  static std::vector<MidiEvent*> MIDI_OUT_DATA;
   static void Init(){
     if(!__L){
       __L=luaL_newstate();
@@ -27,6 +29,7 @@ class Interpreter {
       lua_pcall(__L,0,0,0);
       fprintf(stderr,"%s\n",CYBIN_LOGOTEXT);
       fprintf(stderr,"%s",CYBIN_PROMPT);
+      LoadEmptyTable("midiin");
     }
   }
   static void LoadFile(char* filename){
@@ -72,6 +75,33 @@ class Interpreter {
     lua_settable(__L,-3);
     lua_pop(__L,1);
   }
+  static void LoadEmptyTable(char* name){
+    lua_getglobal(__L,"cybin");
+    lua_pushstring(__L,name);
+    lua_newtable(__L);
+    lua_settable(__L,-3);
+    lua_pop(__L,1);
+  }
+  static void AddNewMidiEvent(MidiEvent* event){
+    lua_getglobal(__L,"cybin");
+    lua_getfield(__L,-1,"midiin");
+    int len = lua_objlen(__L,-1);
+    lua_pushnumber(__L,len+1);
+    // --- //
+    lua_newtable(__L);
+    lua_pushnumber(__L,event->time);
+    lua_setfield(__L,-2,"time");
+    lua_pushnumber(__L,event->port);
+    lua_setfield(__L,-2,"port");
+    for(int i=0;i<event->data.size();i++) {
+      lua_pushnumber(__L,i+1);
+      lua_pushnumber(__L,event->data[i]);
+      lua_settable(__L,-3);
+    }
+    // --- //
+    lua_settable(__L,-3);
+    lua_pop(__L,2);
+  }
   static void EventLoop(char* buff){
     int error = luaL_loadbuffer(__L, buff, strlen(buff), "line") ||
       lua_pcall(__L,0,0,0);
@@ -81,9 +111,17 @@ class Interpreter {
     }
     fprintf(stderr,"%s",CYBIN_PROMPT);
   }
-  static float* Process(int numInChannels, int numOutChannels){
+  static float* Process(double time, int numInChannels, int numOutChannels){
+    for(int i=0;i<MIDI_IN_DATA.size();i++) {
+      MidiEvent* event = MIDI_IN_DATA[i];
+      AddNewMidiEvent(event);
+      delete event;
+    }
+    MIDI_IN_DATA.clear();
+    // --- //
     int numLuaChannels=0;
     int outChannelIndex=0;
+    LoadNumber("time",time);
     int top=lua_gettop(__L);
     lua_getglobal(__L,"__process");
     if(lua_isfunction(__L, -1)){
@@ -115,5 +153,7 @@ class Interpreter {
 lua_State* Interpreter::__L;
 float Interpreter::AUDIO_OUT_CHANNEL_DATA[256];
 float Interpreter::AUDIO_IN_CHANNEL_DATA[256];
+std::vector<MidiEvent*> Interpreter::MIDI_IN_DATA;
+std::vector<MidiEvent*> Interpreter::MIDI_OUT_DATA;
 
 #endif

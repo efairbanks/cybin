@@ -1,5 +1,4 @@
-time=0
 function __process(l,r)
-  time=time+1/48000
-  return math.sin(time*440*3.145)*(l+r),math.sin(time*990*3.145)*(l+r)
+  return math.sin(cybin.time*440*3.145),math.random()
+  --return math.sin(time*440*3.145)*(l+r),math.sin(time*990*3.145)*(l+r)
 end

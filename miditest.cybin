@@ -1,0 +1,41 @@
+dofile('./examples/cybin.cybin')
+
+function map(tbl, f)
+    local t = {}
+    for k,v in pairs(tbl) do
+        t[k] = f(v)
+    end
+    return t
+end
+
+s=Sin{freq=120}
+gain = 0
+r=Reverb2{}
+
+frame=0
+flip=0
+time=0
+function __process()
+   if frame>=44100/150 then
+      frame = 0
+      cybin.midiout(0,144,math.mod(math.random(0,6)*5,12)+60,flip)
+      if flip>0 then flip=0 else flip=1 end
+   end
+   frame=frame+1
+  cybin.midiin=map(
+    cybin.midiin,
+    function(v)
+       if v.time<=cybin.time then
+	  --print(time,v.time)
+	  time=0
+	s{freq=math.pow(2,(v[2]-60)/12)*440}
+	if v[3]>0 then gain=1 else gain=0 end
+        return nil
+      else
+        return v
+     end
+  end)
+  local out = r:Process(gain)
+  time=time+1
+  return out
+end

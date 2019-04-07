@@ -5,6 +5,7 @@
 //#include <soundio/soundio.h>
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
+#include <jack/midiport.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <math.h>
@@ -13,8 +14,8 @@
 #include "libs/newaudio.h"
 #include "libs/interpreter.h"
 #include "libs/util.h"
-float* __process(int numInChannels,int numOutChannels){
-  return Interpreter::Process(numInChannels,numOutChannels);
+float* __process(double time,int numInChannels,int numOutChannels){
+  return Interpreter::Process(time,numInChannels,numOutChannels);
 }
 struct{
   bool offline;
@@ -31,7 +32,7 @@ struct{
 } Config;
 typedef struct{
   char COMMAND_BUFFER[1048576];
-  int dirty=0;
+  char dirty=0;
 } SharedInput;
 void parse_args(int argc, char** argv){
   Config.offline=false;
@@ -109,6 +110,19 @@ int cybin_loadaudiofile(lua_State* L){
   lua_pushstring(L,"samplerate");lua_pushnumber(L,file.sampleRate);lua_settable(L,-3);
   return 1;
 }
+int cybin_midiout(lua_State* L) {
+  int nargs = lua_gettop(L);
+  if (lua_gettop(L) < 1) return luaL_error(L, "expecting at least 1 argument");
+  MidiEvent *event = new MidiEvent();
+  lua_getglobal(L,"cybin");
+  lua_getfield(L,-1,"time");
+  event->time = lua_tonumber(L, -1);
+  lua_pop(L,2);
+  event->port = lua_tointeger(L, 1);
+  for(int i=2;i<=nargs;i++) event->data.push_back(lua_tointeger(L, i));
+  Interpreter::MIDI_OUT_DATA.push_back(event);
+  return 0;
+}
 void* input_handler(void* data){
   SharedInput* input=(SharedInput*)data;
   // input handlng thread
@@ -125,6 +139,7 @@ int main(int argc, char** argv){
   Interpreter::Init();
   // --- Register cybin.loadaudiofile --- //
   Interpreter::LoadFunction("loadaudiofile",cybin_loadaudiofile);
+  Interpreter::LoadFunction("midiout",cybin_midiout);
   // --- Configure environment --- //
   parse_args(argc,argv);
   if(Config.offline) {   // --- OFFLINE RENDERING ---- //
@@ -139,14 +154,21 @@ int main(int argc, char** argv){
     int glFrameCounter=0;
     for(int i=0;i<frames;i++) {
       progress=print_progress(i,frames,20,progress);
-      float* samples=Interpreter::Process(Config.samplerate,Config.channels);
+      float* samples=Interpreter::Process(((double)i)/((double)Config.samplerate),Config.samplerate,Config.channels);
       for(int j=0;j<Config.channels;j++) buffer[i*Config.channels+j]=samples[j];
     }
     AudioFile file(buffer,int(Config.duration*Config.samplerate),Config.channels,Config.samplerate);
     file.Write(Config.outfile);
     printf("\n%s Wrote audio to %s\n",CYBIN_PROMPT,Config.outfile);
   } else {
-    JackAudio::getInstance()->Initialize("cybin", Config.channels, Config.channels, Interpreter::AUDIO_IN_CHANNEL_DATA, Interpreter::AUDIO_OUT_CHANNEL_DATA);
+    JackAudio::getInstance()->Initialize(
+      "cybin",
+      Config.channels, Config.channels,
+      Config.channels, Config.channels,
+      Interpreter::AUDIO_IN_CHANNEL_DATA,
+      Interpreter::AUDIO_OUT_CHANNEL_DATA,
+      &Interpreter::MIDI_IN_DATA,
+      &Interpreter::MIDI_OUT_DATA);
     JackAudio::getInstance()->SetCallback(__process);
     Interpreter::LoadNumber("samplerate",JackAudio::getInstance()->GetSampleRate());
     Interpreter::LoadNumber("channels", Config.channels);

@@ -1,0 +1,9 @@
+frames=0
+function __process()
+   if frames>10000 then
+      frames = 0
+      print(0,1,2,3)
+      cybin.midiout(0,1,2,3)
+   end
+   frames=frames+1
+end

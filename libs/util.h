@@ -6,4 +6,11 @@
 #define ERROR(...) fprintf(stderr,"Error: ");fprintf(stderr,__VA_ARGS__);fprintf(stderr,"\n");
 #define FATAL(...) fprintf(stderr,"Fatal: ");fprintf(stderr,__VA_ARGS__);fprintf(stderr,"\n");exit(1);
 
+class MidiEvent {
+public:
+  double time;
+  int port;
+  std::vector<unsigned char> data;
+};
+
 #endif
