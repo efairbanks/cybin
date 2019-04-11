@@ -22,8 +22,8 @@ function UGen.new(params,ugen)
 	params[k] = nil
       end
     end
-    o:Set(params)
-    o:Set(methodParams)
+    o:Set(params or {})
+    o:Set(methodParams or {})
     return o
   end
 end
@@ -47,7 +47,8 @@ function UGen:Process()
 end
 --------------------------------------------
 UGEN=function(name,defaultParams)
-  _G[name]={__call=function(self,...) return self:Set(...) end}
+  _G[name]={}
+  _G[name].__call=function(self,...) return self:Set(...) end
   _G[name].__index=_G[name]
   _G[name].__newindex=function(self,k,v)
     if type(self[k]) == 'function' then
@@ -61,7 +62,7 @@ UGEN=function(name,defaultParams)
   if defaultParams ~= nil then
     _G[name].new=function(params)
       local o = UGen.new(defaultParams,_G[name])
-      o(params)
+      o(params or {})
       return o
     end
   end
@@ -140,7 +141,7 @@ UGEN('Filter',{
        b1=0,
        b2=0,
        Fc=1000/cybin.samplerate,
-       Q=0.7
+       Q=0.7,
        peakGain=0,
        z1=0,
        z2=0,
