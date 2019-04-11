@@ -8,34 +8,18 @@ function map(tbl, f)
     return t
 end
 
-s=Sin{freq=120}
-gain = 0
-r=Reverb2{}
+m=Metro{}
+s=Poly{voice=FMVoice,maxVoices=10}
 
-frame=0
-flip=0
-time=0
+function play(t)
+  m((P{0,1,2,0,1,2,3,4}*5):Apply(function(x) return x%12 end):Slow(1),
+    function(x,t)
+      s{modAmp=math.sin(t)*1000+1100,freq=math.pow(2,(x-12)/12)*440,env=Env{values={0,1,0},durations={0.01,0.5}}}
+    end,t,t+1)
+end
+m('play')
+
 function __process()
-   if frame>=44100/150 then
-      frame = 0
-      cybin.midiout(0,144,math.mod(math.random(0,6)*5,12)+60,flip)
-      if flip>0 then flip=0 else flip=1 end
-   end
-   frame=frame+1
-  cybin.midiin=map(
-    cybin.midiin,
-    function(v)
-       if v.time<=cybin.time then
-	  --print(time,v.time)
-	  time=0
-	s{freq=math.pow(2,(v[2]-60)/12)*440}
-	if v[3]>0 then gain=1 else gain=0 end
-        return nil
-      else
-        return v
-     end
-  end)
-  local out = r:Process(gain)
-  time=time+1
-  return out
+  m:Process()
+  return s:Process()
 end

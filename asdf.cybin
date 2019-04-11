@@ -1,0 +1,6 @@
+dofile('./examples/cybin.cybin')
+os.execute('jack_connect cybin:audio-out_1 system:playback_1')
+c=Sin()
+function __process()
+  return c()
+end

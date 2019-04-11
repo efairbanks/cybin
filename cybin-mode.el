@@ -202,7 +202,7 @@ element is itself expanded with `cybin-rx-to-string'. "
   :prefix "cybin-"
   :group 'languages)
 
-(defcustom cybin-indent-level 3
+(defcustom cybin-indent-level 2
   "Amount by which Cybin subexpressions are indented."
   :type 'integer
   :group 'cybin

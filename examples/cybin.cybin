@@ -7,37 +7,73 @@ end
 UGen={__call=function(self,...) return self:Set(...) end}
 UGen.__index=UGen
 setmetatable(UGen,{__call=function(cls,...) return cls.new(...) end})
-function UGen.new(params)
-  local o=params or {}
-  setmetatable(o,UGen)
-  return o
-end
-function UGen:Set(params)
-  for k,v in pairs(params) do
-    if type(self[k])=='function' then
-      self[k](self,v)
-    else
-      self[k]=v
+function UGen.new(params,ugen)
+  if ugen==nil then
+    local o=params or {}
+    setmetatable(o,UGen)
+    return o
+  else
+    local o={}
+    setmetatable(o,ugen)
+    local methodParams = {}
+    for k,v in pairs(params) do
+      if type(o[k]) == 'function' then
+	methodParams[k] = v
+	params[k] = nil
+      end
     end
+    o:Set(params)
+    o:Set(methodParams)
+    return o
+  end
+end
+function UGen:Set(...)
+  local arg = { ... }
+  if type(arg[1]) == 'table' then
+    for k,v in pairs(arg[1]) do
+      if type(self[k])=='function' then
+	self[k](self,v)
+      else
+	rawset(self,k,v)
+	--self[k]=v
+      end
+    end
+  else
+    return self:Process(unpack(arg))
   end
 end
 function UGen:Process()
   return 0
 end
 --------------------------------------------
-Sin={__call=function(self,...) return self:Set(...) end}
-Sin.__index=Sin
-setmetatable(Sin,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
-function Sin.new(params)
-  local o=UGen.new(params)
-  o.samplerate = o.samplerate or cybin.samplerate or 48000
-  o.phase = o.phase or 0
-  o.delta = o.delta or 2*math.pi*(o.freq or 440)/o.samplerate
-  o.amp = o.amp or 1
-  o.freq=nil
-  setmetatable(o,Sin)
-  return o
+UGEN=function(name,defaultParams)
+  _G[name]={__call=function(self,...) return self:Set(...) end}
+  _G[name].__index=_G[name]
+  _G[name].__newindex=function(self,k,v)
+    if type(self[k]) == 'function' then
+      self[k](self,v)
+    else
+      rawset(self,k,v)
+      --self[k]=v
+    end
+  end
+  setmetatable(_G[name],{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+  if defaultParams ~= nil then
+    _G[name].new=function(params)
+      local o = UGen.new(defaultParams,_G[name])
+      o(params)
+      return o
+    end
+  end
 end
+--------------------------------------------
+UGEN('Sin',{
+       samplerate=cybin.samplerate,
+       phase=0,
+       delta=0,
+       amp=1,
+       freq=440
+})
 function Sin:freq(frequency)
   self.delta = (2*math.pi*frequency)/self.samplerate
 end
@@ -47,20 +83,14 @@ function Sin:Process(phase)
   return math.sin(self.phase+(phase or 0))*self.amp
 end
 --------------------------------------------
-Pulse={__call=function(self,...) return self:Set(...) end}
-Pulse.__index=Pulse
-setmetatable(Pulse,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
-function Pulse.new(params)
-  local o=UGen.new(params)
-  o.samplerate = o.samplerate or cybin.samplerate or 48000
-  o.phase = o.phase or 0
-  o.delta = o.delta or (o.freq or 440)/o.samplerate
-  o.freq = nil
-  o.amp = o.amp or 1
-  o.width = o.width or 0.5
-  setmetatable(o,Pulse)
-  return o
-end
+UGEN('Pulse',{
+       samplerate=cybin.samplerate,
+       phase=0,
+       delta=0,
+       freq=440,
+       amp=1,
+       width=0.5
+})
 function Pulse:freq(frequency)
   self.delta = frequency/self.samplerate
 end
@@ -70,19 +100,13 @@ function Pulse:Process(params)
   if self.phase > self.width then return 1*self.amp else return -1*self.amp end
 end
 --------------------------------------------
-Saw={__call=function(self,...) return self:Set(...) end}
-Saw.__index=Saw
-setmetatable(Saw,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
-function Saw.new(params)
-  local o=UGen.new(params)
-  o.samplerate = o.samplerate or cybin.samplerate or 48000
-  o.phase = o.phase or 0
-  o.delta = o.delta or (o.freq or 440)/o.samplerate
-  o.freq=nil
-  o.amp = o.amp or 1
-  setmetatable(o,Saw)
-  return o
-end
+UGEN('Saw',{
+       samplerate=cybin.samplerate,
+       phase=0,
+       delta=0,
+       amp=1,
+       freq=440
+})
 function Saw:freq(frequency)
   self.delta = frequency/self.samplerate
 end
@@ -92,19 +116,13 @@ function Saw:Process(params)
   return (self.phase*2-1)*self.amp
 end
 --------------------------------------------
-Tri={__call=function(self,...) return self:Set(...) end}
-Tri.__index=Tri
-setmetatable(Tri,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
-function Tri.new(params)
-  local o=UGen.new(params)
-  o.samplerate = o.samplerate or cybin.samplerate or 48000
-  o.phase = o.phase or 0
-  o.delta = o.delta or (o.freq or 440)/o.samplerate
-  o.freq=nil
-  o.amp = o.amp or 1
-  setmetatable(o,Tri)
-  return o
-end
+UGEN('Tri',{
+       samplerate=cybin.samplerate,
+       phase=0,
+       delta=0,
+       amp=1,
+       freq=440
+})
 function Tri:freq(frequency)
   self.delta = frequency/self.samplerate
 end
@@ -114,9 +132,7 @@ function Tri:Process(params)
   return (math.abs(self.phase-0.5)*4-1)*self.amp
 end
 --------------------------------------------
-Filter={__call=function(self,...) return self:Set(...) end}
-Filter.__index=Filter
-setmetatable(Filter,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+UGEN('Filter')
 function Filter.new(params)
   local o=UGen.new(params)
   o.samplerate = o.samplerate or cybin.samplerate or 48000
@@ -246,9 +262,7 @@ function Filter:Process(input)
   return output;
 end
 --------------------------------------------
-Metro={__call=function(self,...) return self:Set(...) end}
-Metro.__index=Metro
-setmetatable(Metro,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+UGEN('Metro')
 function Metro.new(params)
   local o=UGen.new(params)
   o.samplerate = o.samplerate or cybin.samplerate or 48000
@@ -260,7 +274,8 @@ function Metro.new(params)
   return o
 end
 function Metro:Set(...)
-  arg = { ... }
+  local arg = { ... }
+  if #arg<1 then self:Process() end
   if type(arg[1])=='string' or type(arg[1])=='function' then
     self:Interval(arg[1])
   elseif type(arg[1])=='table' and getmetatable(arg[1])==Pat then
@@ -342,9 +357,7 @@ function Metro:Cycles2Seconds(cycles)
 end
 Metro.c2s=Metro.Cycles2Seconds
 --------------------------------------------
-Sampler={__call=function(self,...) return self:Set(...) end}
-Sampler.__index=Sampler
-setmetatable(Sampler,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+UGEN('Sampler')
 function Sampler.new(params)
   local o=UGen.new(params)
   if type(o.sample)=='string' then
@@ -443,9 +456,7 @@ function Sampler:GetChannels(i)
   return out
 end
 --------------------------------------------
-Env={__call=function(self,...) return self:Reset(...) end}
-Env.__index=Env
-setmetatable(Env,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+UGEN('Env')
 function Env.new(params)
   local o=UGen.new(params)
   o.samplerate = o.samplerate or cybin.samplerate or 48000
@@ -488,9 +499,7 @@ function Env:Process(samplerate)
   return self.out
 end
 --------------------------------------------
-Compressor={__call=function(self,...) return self:Reset(...) end}
-Compressor.__index=Compressor
-setmetatable(Compressor,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+UGEN('Compressor')
 function Compressor.new(params)
   local o=UGen.new(params)
   o.samplerate = o.samplerate or cybin.samplerate or 48000
@@ -588,9 +597,7 @@ Interp.__newindex=function(self,k,v)
   end
 end
 --------------------------------------------
-Allpass={__call=function(self,...) return self:Set(...) end}
-Allpass.__index=Allpass
-setmetatable(Allpass,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+UGEN('Allpass')
 function Allpass.new(params)
   local o=UGen.new(params)
   o.samplerate = o.samplerate or cybin.samplerate or 48000
@@ -634,9 +641,7 @@ function Comb:Process(input,sampleOffset)
   return output
 end
 --------------------------------------------
-Delay={__call=function(self,...) return self:Set(...) end}
-Delay.__index=Delay
-setmetatable(Delay,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+UGEN('Delay')
 function Delay.new(params)
   local o=UGen.new(params)
   o.samplerate = o.samplerate or cybin.samplerate or 48000
@@ -656,9 +661,7 @@ function Delay:Process(input,sampleOffset)
   return output
 end
 --------------------------------------------
-Reverb={__call=function(self,...) return self:Set(...) end}
-Reverb.__index=Reverb
-setmetatable(Reverb,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+UGEN('Reverb')
 function Reverb.new(params)
   local o=UGen.new(params)
   o.samplerate = o.samplerate or cybin.samplerate or 48000
@@ -680,9 +683,7 @@ function Reverb:Process(input)
   return out
 end
 --------------------------------------------
-Reverb2={__call=function(self,...) return self:Set(...) end}
-Reverb2.__index=Reverb2
-setmetatable(Reverb2,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+UGEN('Reverb2')
 function Reverb2.new(params)
   local o=UGen.new(params)
   o.samplerate = o.samplerate or cybin.samplerate or 48000
@@ -708,9 +709,7 @@ function Reverb2:Process(input)
    return out
 end
 --------------------------------------------
-Poly={__call=function(self,...) return self:Set(...) end}
-Poly.__index=Poly
-setmetatable(Poly,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+UGEN('Poly')
 function Poly.new(params)
   local o=UGen.new(params)
   o.samplerate = o.samplerate or cybin.samplerate or 48000
@@ -748,9 +747,7 @@ function Poly:Process(samplerate)
   return out
 end
 --------------------------------------------
-FMVoice={__call=function(self,...) return self:Set(...) end}
-FMVoice.__index=FMVoice
-setmetatable(FMVoice,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+UGEN('FMVoice')
 function FMVoice.new(params)
   local o=UGen.new(params)
   o.env=o.env or Env{values=o.values or {0,1,0},durations=o.durations or {0.01,0.3}}
@@ -776,9 +773,7 @@ function FMVoice:Process()
   return math.atan(self.carrier:Process(sr)*self.carrierShape)*env
 end
 --------------------------------------------
-Pluck={__call=function(self,...) return self:Set(...) end}
-Pluck.__index=Pluck
-setmetatable(Pluck,{__call=function(cls,...) return cls.new(...) end,__index=UGen})
+UGEN('Pluck')
 function Pluck.new(params)
    local o=UGen.new(params)
    o.samplerate=o.samplerate or cybin.samplerate or 48000

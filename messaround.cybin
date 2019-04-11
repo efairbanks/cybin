@@ -1,0 +1,100 @@
+--[[
+dofile('messaround.cybin')
+--]]
+
+os.execute('jack_connect cybin:audio-out_1 system:playback_1 && jack_connect cybin:audio-out_2 system:playback_2')
+
+function sif(cond,a,b) if cond then return a else return b end end
+function Counter(start)
+   local count=start or 0
+   return function(inc,reset)
+      local last = reset or count
+      count=reset or (count + (inc or 1))
+      return last
+   end
+end
+
+function RiseTrigger()
+   local last = 0
+   return function(sig,func)
+      sig = sig or 0
+      local out = 0
+      if sig>last then
+	 if func~=nil then func() end
+	 out = 1
+      end
+      last = sig
+      return out
+   end
+end
+
+function Phasor(freq,phase)
+   local phase = phase or 0
+   local delta = freq/cybin.samplerate
+   return function(freq)
+      if freq~=nil then delta = freq/cybin.samplerate end
+      local last = phase;
+      phase = phase + delta
+      while phase>=1 do phase = phase - 1 end
+      while phase<0 do phase = phase + 1 end
+      return last
+   end
+end
+
+function Saw(freq,phase)
+   local phasor = Phasor(freq,phase)
+   return function(freq)
+      return phasor(freq)*2-1
+   end
+end
+
+function Pulse(freq,phase)
+   local phasor = Phasor(freq,phase)
+   return function(freq,width)
+      local out = phasor(freq)
+      if out<(width or 0.5) then return 1 else return -1 end
+   end
+end
+
+function Tri(freq,phase)
+   local phasor = Phasor(freq,3/4 + (phase or 0))
+   return function(freq)
+      local out = phasor(freq)*4
+      return math.abs(out-2)-1
+   end
+end
+
+function Sin(freq,phase)
+   local phasor = Phasor(freq,phase)
+   return function(freq)
+      return math.sin(phasor(freq)*2*3.14159265359)
+   end
+end
+
+function Cos(freq,phase)
+   local phasor = Phasor(freq,phase)
+   return function(freq)
+      return math.cos(phasor(freq)*2*3.14159265359)
+   end
+end
+
+k={}
+
+k[1]=1
+k[2]=2
+k['farts']=6969420
+
+print(#k)
+
+a=Pulse(23/4)
+b=Pulse(17/4)
+c=Pulse(31/4)
+
+function __process()
+   local out = 1
+   for i=1,7 do
+      out = out + a(c()*10+21,0.1+b()*0.1)*b(a()*8+17,0.8+c()*0.1)*c(b()*15+16,0.2+a()*0.1)
+   end
+   out = out/13
+   return out,out
+end
