@@ -132,7 +132,21 @@ function Tri:Process(params)
   return (math.abs(self.phase-0.5)*4-1)*self.amp
 end
 --------------------------------------------
-UGEN('Filter')
+UGEN('Filter',{
+       samplerate=cybin.samplerate,
+       a0=1,
+       a1=0,
+       a2=0,
+       b1=0,
+       b2=0,
+       Fc=1000/cybin.samplerate,
+       Q=0.7
+       peakGain=0,
+       z1=0,
+       z2=0,
+       filterType='lowpass'       
+})
+--[[
 function Filter.new(params)
   local o=UGen.new(params)
   o.samplerate = o.samplerate or cybin.samplerate or 48000
@@ -154,6 +168,7 @@ function Filter.new(params)
   o:filterType()
   return o
 end
+--]]
 function Filter:freq(frequency)
   self.Fc=frequency/self.samplerate
   self:filterType()
