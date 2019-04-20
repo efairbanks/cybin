@@ -737,6 +737,7 @@ function Poly.new(params)
   return o
 end
 function Poly:Set(params)
+  if params==nil then return self:Process() end
   if params.voice~=nil then self.voice=params.voice end
   params.samplerate=self.samplerate
   local voice=self.voice(params)
@@ -749,14 +750,14 @@ function Poly:Set(params)
   end
   return voice
 end
-function Poly:Process(samplerate)
+function Poly:Process()
   local out=0
   for i=self.maxVoices,1,-1 do
     if self.voices[i]~=nil then
       if self.voices[i].free~=nil then
         table.remove(self.voices,i)
       else
-        out=out+self.voices[i]:Process(samplerate)
+        out=out+self.voices[i]:Process()
       end
     end
   end

@@ -1,0 +1,42 @@
+require('examples.cybin')
+os.execute('jack_connect cybin:audio-out_1 system:playback_1')
+os.execute('jack_connect cybin:audio-out_2 system:playback_2')
+
+function dsig()
+  local err=0
+  return function(s)
+    if s>err then
+      err=err+(1-s)
+      return 1
+    else
+      err=err-s
+      return 0
+    end
+  end
+end
+
+s=Sin{freq=2000}
+d=dsig()
+f=Filter{freq=2000}
+time=0
+note=0
+notes={7,0,3,0}
+beat=0
+
+function __process()
+  local raw=s()
+  local out=raw/2+0.5
+  time=time+1
+  if math.mod(time,10000)==0 then
+    time=0
+    note=note+1
+    beat=beat+1
+    if note+1>#notes then note=0 end
+    s.freq=math.pow(2,(notes[note+1]+math.mod(math.floor(beat/8)*5,12))/12)*440
+  end
+  out = d(out)-0.5
+  out = f(out)
+  out=out*0.03
+  raw=raw*0.03
+  return out,raw
+end

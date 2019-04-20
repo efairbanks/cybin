@@ -19,15 +19,24 @@ function Pat:__call(t)
   end
 end
 function Pat:__zindex(i)
-  while i<0 do i=i+#self end
-  while i>=#self do i=i-#self end
-  return rawget(self,i+1)
+  if i==nil then
+    self.index=(self.index or -1)+(self.delta or 1)
+    return self(self.index)
+  else
+    while i<0 do i=i+#self end
+    while i>=#self do i=i-#self end
+    return rawget(self,i+1)
+  end
 end
 function Pat:__index(i)
-  i=i-1
-  while i<0 do i=i+#self end
-  while i>=#self do i=i-#self end
-  return rawget(self,i+1)
+  if type(i)=='number' then
+    i=i-1
+    while i<0 do i=i+#self end
+    while i>=#self do i=i-#self end
+    return rawget(self,i+1)
+  else
+    return rawget(self,i)
+  end
 end
 function Pat.__combine(a,b,operator)
   local function opwrapper(a,b)
@@ -53,7 +62,7 @@ function Pat:__tostring()
     for i=1,#t do
       local separator=' '
       if i==1 then separator='' end
-      if type(t[i])=='table' and #t[i]<1 and #t[i].t<1 then
+      if type(t[i])=='table' and #t[i]<1 then
         out=out..separator..'_'
       else
         out=out..separator..tostring(t[i])
@@ -154,3 +163,11 @@ function Pat.e(nPegs,nHoles)
   end
   return Pat(flatten(pegs))
 end
+
+--[[
+dofile('newpat.cybin')
+a=Pat.e(3,8)
+print(a())
+--]]
+
+

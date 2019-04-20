@@ -1,0 +1,43 @@
+require('examples.cybin')
+require('newpat')
+P=Pat
+
+function Trigger()
+  local last=1
+  return function(t,c)
+    local int,rem = math.modf(t)
+    if last>rem then c(int) end
+    last=rem
+  end
+end
+
+samples={
+  kick=cybin.loadaudiofile('./examples/KICK.AIF'),
+  snare=cybin.loadaudiofile('./examples/SNARE.AIF'),
+  hat=cybin.loadaudiofile('./examples/HAT.AIF'),
+  glass=cybin.loadaudiofile('./examples/GLASS.AIF')
+}
+
+t=Trigger()
+sampler=Poly{voice=Sampler,maxVoices=15}
+
+function __process()
+  local x
+  _=true
+  o=false
+  t(cybin.time*4,
+    function(b)
+      -- let's abuse short circuiting to sequence
+      x=P{o,_}(b) or sampler{sample=samples.kick}
+      x=P{_,_,o,_}(b) or sampler{sample=samples.snare}
+      x=P{_,o}(b) or sampler{sample=samples.hat}
+      for i=0,2 do
+	x=P{_,o}(b) or sampler{sample=samples.glass,speed=10,pitch=math.pow(2,(Pat{{0,3,7},{5,8,0}}(math.floor(b/8))(i))/12)}
+      end
+  end)
+  return sampler()*0.3*0.00
+end
+
+--[[
+dofile('newstuff.cybin')
+--]]
