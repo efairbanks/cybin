@@ -1,9 +1,0 @@
-dofile('./examples/cybin.cybin')
-os.execute('jack_connect cybin:audio-out_1 system:playback_1')
-c=Saw()
-f=Filter()
-f.freq=500
-
-function __process()
-  return f(c())
-end
