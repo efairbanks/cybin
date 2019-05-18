@@ -29,6 +29,7 @@ struct{
   int fps;
   int render_width;
   int render_height;
+  std::vector<char*> globals;
 } Config;
 typedef struct{
   char COMMAND_BUFFER[1048576];
@@ -79,6 +80,12 @@ void parse_args(int argc, char** argv){
     } else if(strcmp("--fps",currentArg)==0){
       i++;currentArg=argv[i];
       Config.fps=atoi(currentArg);
+    } else if(currentArg[0]=='-') {
+      int j=0;
+      while(currentArg[j]=='-'&&currentArg[j]!='\0') j++;
+      Config.globals.push_back(currentArg+j);
+      i++;currentArg=argv[i];
+      Config.globals.push_back(currentArg);
     } else {
       Config.loadfile=currentArg;
     }
@@ -142,6 +149,7 @@ int main(int argc, char** argv){
   Interpreter::LoadFunction("midiout",cybin_midiout);
   // --- Configure environment --- //
   parse_args(argc,argv);
+  for(int i=0;i<Config.globals.size();i+=2) Interpreter::LoadString(Config.globals[i],Config.globals[i+1]);
   if(Config.offline) {   // --- OFFLINE RENDERING ---- //
     Interpreter::LoadNumber("samplerate",Config.samplerate);
     Interpreter::LoadNumber("channels",Config.channels);
@@ -154,7 +162,7 @@ int main(int argc, char** argv){
     int glFrameCounter=0;
     for(int i=0;i<frames;i++) {
       progress=print_progress(i,frames,20,progress);
-      float* samples=Interpreter::Process(((double)i)/((double)Config.samplerate),Config.samplerate,Config.channels);
+      float* samples=Interpreter::Process(((double)i)/((double)Config.samplerate),Config.channels,Config.channels);
       for(int j=0;j<Config.channels;j++) buffer[i*Config.channels+j]=samples[j];
     }
     AudioFile file(buffer,int(Config.duration*Config.samplerate),Config.channels,Config.samplerate);
