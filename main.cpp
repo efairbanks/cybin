@@ -2,16 +2,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-//#include <soundio/soundio.h>
-#include <jack/jack.h>
-#include <jack/ringbuffer.h>
-#include <jack/midiport.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <math.h>
 #include <vector>
 #include "libs/audiofile.h"
-#include "libs/newaudio.h"
+#include "libs/audio.h"
 #include "libs/interpreter.h"
 #include "libs/util.h"
 float* __process(double time,int numInChannels,int numOutChannels){
@@ -196,35 +192,6 @@ int main(int argc, char** argv){
     }
     // --- Shutdown  --- //
     JackAudio::getInstance()->Shutdown();
-
-    // --- REALTIME RENDERING --- //
-    /*
-    // --- Continue startup --- //
-    Audio::Init(__process,Config.set_device);
-    Interpreter::LoadNumber("samplerate",Audio::samplerate);
-    Interpreter::LoadNumber("channels",Audio::channels);
-    if(Config.loadfile!=NULL) Interpreter::LoadFile(Config.loadfile);
-    if(Config.list_devices) {
-      Audio::ListDevices();
-      printf("cybin> "); // this is inelegant, we can do better.
-    }
-    // --- Handle REPL event loop --- //
-    SharedInput Input;
-    pthread_t input_handler_thread;
-    pthread_create(&input_handler_thread,NULL,input_handler,(void*)&Input);
-    for(;;){
-      if(Input.dirty){
-        Interpreter::EventLoop(Input.COMMAND_BUFFER);
-        Input.dirty=false;
-        DEBUG("BUFFER CLEAN!");
-      }
-      Audio::EventLoop();
-      Frag::EventLoop();
-      usleep(10000000/10000);
-    }
-    // --- Shutdown  --- //
-    Audio::Shutdown();
-    */
   }
   Interpreter::Shutdown();
   return 0;
