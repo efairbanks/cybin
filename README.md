@@ -15,7 +15,7 @@ What it does is provide the user with:
 
 What it does not do is:
 * tell the user how to make music
-* tell the user what music or is not
+* tell the user what is or is not music
 * tell the user it should be used to make music
 * tell the user it should or should not be used for any particular purpose
 * anything else
@@ -24,15 +24,15 @@ What it does not do is:
 * Make sure you've got a C++ compiler
 * Install [`LuaJIT`](https://github.com/LuaJIT/LuaJIT), [`JACK`](https://github.com/jackaudio), and [`libsndfile`](https://github.com/erikd/libsndfile) _(MacOS dependencies are available through [brew](https://brew.sh/))_
 * Install [`git`](https://git-scm.com/)
-* Run `cd && git clone https://github.com/efairbanks/Cybin.git && cd Cybin`
+* Run `cd && git clone https://github.com/efairbanks/cybin.git && cd cybin`
 * Run `./LINUX_BUILD.SH` or `MACOS_BUILD.SH` depending on your platform _(Windows support hopefully coming soon)_
-* Put `export PATH=$PATH:~/Cybin` in your `.bash_profile` or other shell startup file _(or symlink to the `cybin` executable, whatever floats your boat)_
+* Put `export PATH=$PATH:~/cybin` in your `.bash_profile` or other shell startup file _(or symlink to the `cybin` executable, whatever floats your boat)_
 
 ## Optional
 * Install [`Emacs`](https://www.gnu.org/software/emacs/)
 * Place the following into your Emacs init file (`~/.emacs`, `~/.emacs.el`, or `~/.emacs.d/init.el`)
 ```
-(add-to-list 'load-path "~/Cybin")
+(add-to-list 'load-path "~/cybin")
 (autoload 'cybin-mode "cybin-mode" "Cybin editing mode." t)
 (add-to-list 'auto-mode-alist '("\\.cybin$" . cybin-mode))
 (add-to-list 'interpreter-mode-alist '("cybin" . cybin-mode))
