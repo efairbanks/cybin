@@ -1,6 +1,7 @@
 # Cybin
 
 v _(thumbnail links to intro video)_ v
+
 [![Cybin: An Introduction](https://img.youtube.com/vi/4lTUlEk2jl0/0.jpg)](https://www.youtube.com/watch?v=4lTUlEk2jl0)
 
 Cybin is a dependency-light, LuaJIT-based audio programming environment suitable for realtime performance and offline rendering. Unlike many popular multimedia programming environments, it strives to do everything in one place all at once, and its strength and weakness lies in completely reinventing the wheel in order to offer the user sample-accurate timing and complete control.
