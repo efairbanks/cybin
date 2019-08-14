@@ -43,34 +43,47 @@ function Adsynth(e)
   e.oscs=e.oscs or {}
   e.freq=e.freq or 440
   e.amp=e.amp or 1
-  e.env=Env{vals={0,1,0},durs={7/16,1/16}}
-  for i=1,80 do e.oscs[#e.oscs+1]=Sin{freq=i*e.freq+math.sin(i*23.173)*e.freq/80,amp=e.amp*0.5/i} end
+  e.env=Env{vals={0,1,1,0},durs={0.001,2,0.001}}
+  for i=1,30 do e.oscs[#e.oscs+1]=Sin{
+      freq=i*e.freq+math.sin(i*23.173)*e.freq/45,
+      amp=e.amp*0.5/i} end
   e.done=false
   return function(p)
     if type(p)=='table' then return DC(p,e) end
     local out=0
-    for i=1,#e.oscs do out=out+e.oscs[i]() end
-    out=out*e.env()
+    for i=1,#e.oscs do out=out+e.oscs[i]()*(math.cos(i*math.pi*2/80+cybin.time*math.pow(math.mod(e.freq,7.311),2))+1) end
+    out=out*e.env()*e.amp
     e.done=e.env{}.done
     return out
   end
 end
 
 --[[
-dofile('working.cybin')
+dofile('harmor_style_growl_bass.cybin')
 --]]
 
 p=Poly()
 t=Trigger()
 
+local lastSample=0
 function __process()
-  t(math.mod(cybin.time*2,1),function()
-      local freq=math.pow(2,math.mod(math.floor(cybin.time/2)*5,12)/12)*55
-      p(Adsynth{freq=freq})
-      p(Adsynth{freq=freq*11,amp=1/3})
+  t(math.mod(cybin.time*0.5,1),function()
+      local freq=math.pow(2,math.mod(math.floor(cybin.time/2)*5,12)/12)*50
+      p(Adsynth{freq=freq,amp=1})
+      p(Adsynth{freq=freq*3.02,amp=1/3})
+      p(Adsynth{freq=freq*5.98,amp=1/3})
   end);
   local out=p()
-  out=math.atan(out*200000)
+  out=math.atan(out*1)
   out=out*0.5
+  --- simple crossover filter ---
+  local coef=0.5+math.sin(cybin.time*2.5+math.pi/8)*0.499
+  local lows=out
+  lows=lows*coef+(1-coef)*lastSample
+  local highs=out-lows
+  lastSample=lows
+  --- neat little distortion pipeline ---
+  out=math.atan(highs*10)+math.atan(lows*10)
+  out=math.atan(out*5)/10
   return out,out
 end
