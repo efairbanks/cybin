@@ -1,0 +1,42 @@
+--[[
+
+Utils
+
+These are some helpful utilities.
+
+--]]
+
+-- table deep copy
+function DC(t,c)
+  if type(t)~='table' then return t end
+  local r=c or {}
+  for k,v in pairs(t) do r[k]=DC(v) end
+  for i,v in ipairs(t) do r[i]=DC(v) end
+  return r
+end
+
+-- table wrap
+function wrap(t,i)
+  while i<1 do i=i+#t end
+  while i>#t do i=i-#t end
+  return t[i]
+end
+
+-- a fancy way to show the innards of tables
+function printt(t)
+  if type(t)~='table' then
+    io.write(' '..tostring(t)..' ')
+  else
+    io.write('[')
+    for i,v in ipairs(t) do
+      printt(v)
+    end
+    for k,v in pairs(t) do
+      if type(k)~='number' then
+	io.write('| '..k..' =')
+	printt(v)
+      end
+    end
+    io.write(']')
+  end
+end

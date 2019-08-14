@@ -1,0 +1,144 @@
+require('cylibs.ugen')
+require('cylibs.clodule')
+require('cylibs.utils')
+os.execute('jack_lsp -c')
+os.execute('jack_connect cybin:audio-out_1 system:playback_1')
+os.execute('jack_connect cybin:audio-out_2 system:playback_2')
+
+-- some functions to help parse strings and turn them into
+-- musical patterns that are then transformed into events
+-- to be pumped into an event scheduler
+function isDelim(c) return c==' ' or c=='[' or c==']' end
+function tokenize(s,ret)
+  local ret=ret or {}
+  if #s<1 then return ret end
+  if #s<2 then ret[#ret+1]=string.sub(s,1,1); return ret end
+  if isDelim(string.sub(s,1,1)) then
+    ret[#ret+1]=string.sub(s,1,1)
+    tokenize(string.sub(s,2,-1),ret)
+  else
+    local i=1
+    while not(isDelim(string.sub(s,i,i))) and i<=#s do i=i+1 end
+    ret[#ret+1]=string.sub(s,1,i-1)
+    tokenize(string.sub(s,i,-1),ret)
+  end
+  return ret
+end
+function parse(tokens)
+  local ret={}
+  while #tokens>0 do
+    local token=table.remove(tokens,1)
+    if isDelim(token) then
+      if token=='[' then ret[#ret+1]=parse(tokens) end
+      if token==']' then return ret end
+    else
+      ret[#ret+1]=token
+    end
+  end
+  return ret
+end
+function Pat2Events(str,start,duration,trunc,offset)
+  function _EQ(a,b) if math.abs(a-b)>0.000001 then return false else return true end end
+  local pat=parse(tokenize(str))
+  local ret={}
+  local func=function(x) print(x) end
+  local function ftime(events,dur,offset)
+    local ret={}
+    for _,e in ipairs(events) do
+      local t=e.time-offset
+      local f=e.func
+      if (t>start or _EQ(t,start)) and t<start+dur and not(_EQ(t,start+dur)) then
+	ret[#ret+1]={time=t,func=f}
+      end
+    end
+    return ret
+  end
+  local function p2e(p,start,dur)
+    local nevents=0
+    local eventi=1
+    for i=1,#p do
+      if _G[p[i]]==nil then nevents=nevents+1 end
+    end
+    for i=1,#p do
+      if _G[p[i]]==nil then
+	local lstart=start+(dur*(eventi-1)/nevents)
+	local ldur=dur/nevents
+	if type(p[i])=='table' then
+	  p2e(p[i],lstart,ldur)
+	else
+	  table.insert(ret,{time=lstart,
+			    func=function() local x=DC(p[i]); local f=func; f(lstart,ldur,x) end})
+	end
+	eventi=eventi+1
+      else
+	if type(_G[p[i]])=='function' then func=_G[p[i]] end
+      end
+    end
+    return ret
+  end  
+  return ftime(p2e(pat,start or 0,duration or 1),trunc or duration,offset or 0)
+end
+
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+--[[ you can execute the following line /w Ctrl-C => Ctrl-C to execute the whole file
+dofile('b.cybin')
+--]]
+
+-- instantiate scheduler, fx, instruments
+s=Scheduler{delta=0.8/cybin.samplerate}
+comp=Compressor{threshold=-30,release=0.005,ratio=3.5}
+mcomp=Compressor{threshold=-15,ratio=3.5,attack=0.001,release=0.007}
+verb=Reverb2{nodes=3,coef=0.9}
+p=Poly{}
+m=Poly{}
+
+-- some helper funcs for playing instruments
+function kick(_,decay,click)
+  if click~='-' then
+    click=math.max(math.min(click or 0.6,1),0)*0.4
+    decay=decay/2 or 0.35
+    p(Voice{env=Env{durs={0.02/math.max(1,click*5),decay}},mfreq=0,freq=Env{vals={4000,300,50},durs={0.0001+(click or 1)*0.0035,0.025}}})
+  end
+end
+function synth(time,dur,val)
+  val=tonumber(val)
+  if val then m(Voice{freq=500*val/8,mfreq=500*5*val,mamp=800,env=Env{vals={0,1,0},durs={0.005,dur*1}}}) end
+end
+function hats(time,dur,val)
+  if tonumber(val) then
+    p(Voice{freq=6000+2000*(math.sin(time*57.365)+1.01),mamp=800,mfreq=700+val,env=Env{vals={0,1/80,0},durs={0.001,dur*val/1.5}}})
+  end
+end
+
+-- patterns!
+function p_a(time,dur,val)
+  --s{events=Pat2Events('synth [1 - - 0.125 - 0.5] [0.5 - 0.7 0.9 - 1.1] 1 [0.125 - 0.5 0.25 - 0.75]',time,2,dur,val)}
+  s{events=Pat2Events('synth [.125 - - .25 - - .5 - - 1 - - .25 - .25 -]',time,2,dur,val)}
+  s{events=Pat2Events('synth - [1 - 1] - 1 - [.25 - .125] - [2 - 4]',time,2,dur,val)}
+  s{events=Pat2Events('kick 1 [1 0.1] 1 [1 - 0.1 0.2 - 1]',time,2,dur,val)}
+  s{events=Pat2Events('hats 2 - 1 1.5 0.5 1 1.75 0.25 1 1 0.5 1 2 - 1 1.5 0.5 1 1.75 0.25 1 1 0.5 1',time,2,dur,val)}
+end
+
+--[[ you can execute the following line /w Ctrl-C => Ctrl-C to execute the whole file
+dofile('b.cybin')
+--]]
+
+function play(t)
+  local events=Pat2Events('p_a 0',t,2)
+  s{events=events}
+  s{event={time=t+2,func=play}}
+end
+play(0)
+
+function __process()
+  s()
+  local out=p()
+  out=comp(math.atan(m()),out)+out
+  out=verb(out)/10+out
+  out=mcomp(out)*2
+  return out,out
+end
+

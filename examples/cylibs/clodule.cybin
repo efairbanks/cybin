@@ -1,0 +1,166 @@
+--[[
+
+Clodule
+
+This is a music-centric DSP-lib where nearly every module is a closure, which is to say, a stateful function. See: https://en.wikipedia.org/wiki/Closure_(computer_programming)
+
+It is an alternative/supplement to the UGen lib. It can be used alongside it if one is mindful of overlapping module/ugen names.
+
+The philosophy of this lib is to keep things as simple, concise, and efficient as possible.
+
+--]]
+
+-- table deep copy
+function DC(t,c)
+  if type(t)~='table' then return t end
+  local r=c or {}
+  for k,v in pairs(t) do r[k]=DC(v) end
+  for i,v in ipairs(t) do r[i]=DC(v) end
+  return r
+end
+
+-- table wrap
+function wrap(t,i)
+  while i<1 do i=i+#t end
+  while i>#t do i=i-#t end
+  return t[i]
+end
+
+-- trigger a function on falling edge
+function Trigger(e)
+  e=DC(e) or {}
+  return function(p,f)
+    if type(p)=='table' then return DC(p,e) end
+    if p<(e.last or 1) then f() end
+    e.last=p
+    return p;
+  end
+end
+-- a simple audio-rate event scheduler
+function Scheduler(e)
+  e=DC(e) or {}
+  e.events=e.events or {}
+  e.time=e.time or 0
+  e.delta=e.delta or 1/cybin.samplerate
+  function noop() end
+  return function(p)
+    if type(p)=='table' then
+      if p.event~=nil then
+	local event=DC(p.event)
+	e.events[tostring(event)]=event
+      end
+      if p.events~=nil then
+	for i=1,#p.events do
+	  local event=DC(p.events[i])
+	  e.events[tostring(event)]=event
+	end
+      end
+      return e
+    end
+    for k,v in pairs(e.events) do
+      if v.time<=e.time then
+	if v.func~=nil then v.func(e.time) end
+	e.events[k]=nil
+      end
+    end
+    e.time=e.time+e.delta
+    return e.time
+  end
+end
+-- a simple envelope-generator
+function Line(e)
+  e=DC(e) or {}
+  e.phase=e.phase or 0
+  e.delta=e.delta or 1/cybin.samplerate
+  e.a=e.a or 0
+  e.b=e.b or 1
+  return function(p)
+    if type(p)=='table' then return DC(p,e) end
+    e.phase=math.min(e.phase+e.delta,1)
+    return e.a*(1-e.phase) + e.b*e.phase
+  end
+end
+-- a counter
+function Counter(e)
+  e=DC(e) or {}
+  return function(p)
+    if type(p)=='table' then return DC(p,e) end
+    e.phase=(e.phase or -1)+1
+    return e.phase
+  end
+end
+-- a more sophisticated envelope-generator
+function Env(e)
+  e=DC(e) or {}
+  e.vals=e.vals or {0,1,0}
+  e.durs=e.durs or {0.01,1}
+  e.exps=e.exps or {1}
+  e.index=1
+  e.done=false
+  e.line=Line{}
+  return function(p)
+    if type(p)=='table' then return DC(p,e) end
+    local i=math.min(e.line(),1)
+    if i>=1 and e.index<=#e.durs then
+      e.line{}.phase=0
+      e.index=e.index+1
+      e.line{}.delta=1/(e.durs[math.min(e.index,#e.durs)]*cybin.samplerate)
+      i=e.line()
+    end
+    e.line{}.delta=1/(e.durs[math.min(e.index,#e.durs)]*cybin.samplerate)
+    if e.index>#e.durs then e.done=true; return e.vals[#e.vals] end
+    if wrap(e.exps,e.index)~=1 then i=pow(i,wrap(e.exps,e.index)) end
+    return (1-i)*wrap(e.vals,e.index)+i*wrap(e.vals,e.index+1)
+  end
+end
+-- a frequency-modulation synth voice
+function Voice(e)
+  function cx(x)
+    if type(x)=='function' then return x() else return x end
+  end
+  e=DC(e) or {}
+  e.env=e.env or Env()
+  e.osc=e.osc or Sin()
+  e.freq=e.freq or 440
+  e.mfreq=e.mfreq or 660
+  e.mod=e.mod or Sin{}
+  e.mamp=e.mamp or 500
+  e.done=false
+  return function(p)
+    if type(p)=='table' then return DC(p,e) end
+    if e.env{}.done then e.done=true; return 0 end
+    e.mod{freq=cx(e.mfreq)}
+    e.osc{freq=e.mod()*cx(e.mamp)+cx(e.freq)}
+    return e.env()*math.atan(e.osc()*1.5)
+  end
+end
+-- a very naive sample-player
+function Sampler(e)
+  e=DC(e) or {}
+  e.index=e.index or 1
+  if type(e.sample)=='string' then e.sample=cybin.loadaudiofile(e.sample) end
+  e.sample=e.sample or {0}
+  e.channels=e.sample.channels or 1
+  e.samplerate=e.sample.samplerate or cybin.samplerate
+  e.done=false
+  return function(p)
+    if type(p)=='table' then return DC(p,e) end
+    e.index=e.index+e.sample.channels
+    if e.done or e.index>=e.sample.frames*e.sample.channels then e.done=true; return 0 end
+    return e.sample[e.index]
+  end
+end
+-- a simple wrapper for voices to support polyphony with automatic freeing when the voices are done playing
+function Poly()
+  local e={}
+  e.voices={}
+  return function(v)
+    local out=0
+    if v~=nil then e.voices[tostring(v)]=v; return e else
+      for k,v in pairs(e.voices) do
+	if v{}.done then e.voices[k]=nil else out=out+v() end
+      end
+      return out
+    end
+  end
+end

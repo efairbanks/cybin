@@ -7,7 +7,9 @@
 #include <math.h>
 #include <vector>
 #include "libs/audiofile.h"
+#ifndef NOJACK
 #include "libs/audio.h"
+#endif
 #include "libs/interpreter.h"
 #include "libs/util.h"
 float* __process(double time,int numInChannels,int numOutChannels){
@@ -32,7 +34,11 @@ typedef struct{
   char dirty=0;
 } SharedInput;
 void parse_args(int argc, char** argv){
+#ifndef NOJACK
   Config.offline=false;
+#else
+  Config.offline=true;
+#endif
   Config.list_devices=false;
   Config.set_device=-1;
   Config.duration=10;
@@ -165,14 +171,15 @@ int main(int argc, char** argv){
     file.Write(Config.outfile);
     printf("\n%s Wrote audio to %s\n",CYBIN_PROMPT,Config.outfile);
   } else {
+#ifndef NOJACK
     JackAudio::getInstance()->Initialize(
-      "cybin",
-      Config.channels, Config.channels,
-      Config.channels, Config.channels,
-      Interpreter::AUDIO_IN_CHANNEL_DATA,
-      Interpreter::AUDIO_OUT_CHANNEL_DATA,
-      &Interpreter::MIDI_IN_DATA,
-      &Interpreter::MIDI_OUT_DATA);
+        "cybin",
+        Config.channels, Config.channels,
+        Config.channels, Config.channels,
+        Interpreter::AUDIO_IN_CHANNEL_DATA,
+        Interpreter::AUDIO_OUT_CHANNEL_DATA,
+        &Interpreter::MIDI_IN_DATA,
+        &Interpreter::MIDI_OUT_DATA);
     JackAudio::getInstance()->SetCallback(__process);
     Interpreter::LoadNumber("samplerate",JackAudio::getInstance()->GetSampleRate());
     Interpreter::LoadNumber("channels", Config.channels);
@@ -192,6 +199,7 @@ int main(int argc, char** argv){
     }
     // --- Shutdown  --- //
     JackAudio::getInstance()->Shutdown();
+#endif
   }
   Interpreter::Shutdown();
   return 0;

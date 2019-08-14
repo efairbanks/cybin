@@ -1,0 +1,498 @@
+Pattern={}
+setmetatable(Pattern, {__call = function (cls, ...) return cls.new(...) end,})
+Pattern.__index=function(t,k)
+  if type(k)=='number' then
+    return t.t[k]
+  else
+    return Pattern[k]
+  end
+end
+Pattern.__newindex=function(t,k,v)
+  if type(k)=='number' then
+    t.t[k]=v
+  else
+    rawset(t,k,v)
+  end
+end
+function Pattern.new(t)
+  local o={}
+  setmetatable(o,Pattern)
+  o.t={}
+  o.cycles=t.cycles or 1
+  o.offset=t.offset or 0
+  o.parallel=t.parallel or false
+  for i=1,#(t.t or t) do
+    if type(t[i])=='table' then
+      o.t[i]=Pattern(t[i])
+    else
+      o.t[i]=t[i]
+    end
+  end
+  return o
+end
+function Pattern.GenDup(n,size)
+  local pat=Pattern{}
+  for i=1,size do pat[i]=n end
+  return pat
+end
+function Pattern.GenBjork(nPegs,nHoles)
+  local pegs,holes,lastPegIndex,work,pegs,holes
+  local function genDup(n,size)
+    local t={}
+    for i=1,size do t[i]=n end
+    return t
+  end
+  local flatten=function(arr)
+    local result={}
+    local function flatten(arr)
+      for _, v in ipairs(arr) do
+        if type(v)=="table" then
+          flatten(v)
+        else
+          table.insert(result,v)
+        end
+      end
+    end
+    flatten(arr)
+    return result
+  end
+  local function concat(a,b)
+    if b==nil then return a end
+    local ret={}
+    for i=1,#a do ret[#ret+1]=a[i] end
+    for i=1,#b do ret[#ret+1]=b[i] end
+    return ret
+  end
+  local function selectRange(t,from,to)
+    local ret={}
+    for i=from,to,1 do ret[#ret+1]=t[i] end
+    return ret
+  end
+  if nPegs<1 then return Pattern.GenDup(0,nHoles) end
+  nHoles=nHoles-nPegs
+  pegs=genDup({1},nPegs)
+  holes=genDup({0},nHoles)
+  lastPegIndex=0
+  work=function()
+    if (lastPegIndex~=0) then
+      holes=selectRange(pegs,lastPegIndex,#pegs)
+      pegs=selectRange(pegs,1,lastPegIndex-1)
+    end
+    nPegs=#pegs
+    nHoles=#holes
+    for inc=0,nHoles-1,1 do
+      pegs[(inc%nPegs)+1]=concat(pegs[(inc%nPegs)+1],holes[inc+1])
+    end
+    lastPegIndex=(nHoles%nPegs)+1
+  end
+  work()
+  while (lastPegIndex~=1) and (lastPegIndex~=(nPegs)) do
+    work()
+  end
+  return Pattern.new(flatten(pegs))
+end
+function Pattern.GenBjorkStructure(size,selects)
+  local currentLevel=Pattern.GenDup(1,size)
+  local ret=Pattern.GenDup(0,size)
+  for i=1,#selects do
+    currentLevel=currentLevel:BjorkSelect(selects[i])
+    ret=ret+currentLevel
+  end
+  return ret
+end
+function Pattern:BjorkSelect(select)
+  local selectIndex,selectPattern,outPattern
+  outPattern=Pattern.new(self)
+  outPattern.t={}
+  for i=1,#self.t do outPattern[i]=self[i] end
+  selectIndex=1
+  selectPattern=Pattern.GenBjork(select,Pattern.Sum(self:Apply(function(x) if x>0 then return 1 else return 0 end end)))
+  for i=1,#outPattern.t do
+    if outPattern[i]>0 then
+      outPattern[i]=outPattern[i]*selectPattern[selectIndex]
+      selectIndex=selectIndex+1
+    end
+  end
+  return outPattern
+end
+function Pattern:Select(select)
+   local ret=Pattern(self);ret.t={}
+   for i=1,#self.t do
+      if Pattern.WrapAt(select,i)>0 then
+	 ret[#ret.t+1]=self[i]
+      end
+   end
+   return ret
+end
+function Pattern:Mask(select)
+   local ret=Pattern(self);ret.t={}
+   for i=1,#self.t do
+      if Pattern.WrapAt(select,i)>0 then
+	 ret[#ret.t+1]=self[i]
+      else
+	 ret[#ret.t+1]=Pat{}
+      end
+   end
+   return ret
+end
+function Pattern:SuperMask(select)
+   local ret=Pattern(self);ret.t={}
+   local selecti=1
+   for i=1,#self.t do
+      if Pattern.WrapAt(select,selecti)>0 then
+	 ret[#ret.t+1]=self[i]
+      else
+	 ret[#ret.t+1]=Pat{}
+      end
+      if not(type(self[i])=='table' and #self[i].t<1) then selecti=selecti+1 end
+   end
+   return ret
+end
+function Pattern:RemoveAt(index)
+  local ret=Pattern(self)
+  local len=#(ret.t or ret)
+  while index<1 do index=index+len end
+  local remIndex=((index-1)%len)+1
+  table.remove(ret.t,remIndex)
+  return ret
+end
+function Pattern:WrapAt(index)
+  local len=#(self.t or self)
+  while index<1 do index=index+len end
+  local out=self[((index-1)%len)+1]
+  if type(out)=='table' then
+     return Pattern(out)
+  else
+     return out
+  end
+end
+function Pattern:SelectRange(from,to)
+  local ret=Pattern(self);ret.t={}
+  for i=from,to,1 do ret.t[#ret.t+1]=self.t[i] end
+  return ret
+end
+function Pattern:Clump(n)
+   local ret=Pat{}
+   local i=1
+   n=math.max(n,1)
+   while i<=#self.t do
+      ret[#ret.t+1]=self:SelectRange(i,math.min(i+n-1,#self.t))
+      i=i+n
+   end
+   return ret
+end
+function Pattern:Flatter()
+   local ret=Pattern(self);ret.t={}
+   for i=1,#self.t do
+      ret=ret..self[i]
+   end
+   return ret
+end
+function Pattern:Shuffle(f)
+   local ret=Pattern(self);ret.t={}
+   local rem=Pattern(self)
+   for i=1,#self.t do
+      local index=f(i)
+      ret[i]=rem:WrapAt(index)
+      rem=rem:RemoveAt(index)
+   end
+   return ret
+end
+function Pattern:Sum()
+  local sum=0
+  for i=1,#self.t do
+    if type(self.t[i])=='table' then
+      sum=sum+Pattern.Sum(self.t[i])
+    else
+      sum=sum+self.t[i]
+    end
+  end
+  return sum
+end
+function Pattern.combine(a,b,operator)
+  local function opwrapper(a,b)
+  if a==nil or b==nil then
+      return Pat{}
+    else
+      return operator(a,b)
+    end
+  end
+  local ret
+  if type(a)=='table' then
+    ret=Pattern(a);ret.t={}
+  elseif type(b)=='table' then
+    ret=Pattern(b);ret.t={}
+  else
+    ret=Pat{}
+  end
+  if a==nil or b==nil then
+    ret=Pat{}
+  elseif type(a)=="table" and type(b)=="table" then
+    for i=1,math.max(#a.t,#b.t) do ret[i]=opwrapper(Pattern.WrapAt(a,i),Pattern.WrapAt(b,i)) end
+  elseif type(a)=="number" and type(b)=="table" then
+    for i=1,#b.t do ret[i]=opwrapper(a,Pattern.WrapAt(b,i)) end
+  elseif type(a)=="table" and type(b)=="number" then
+    for i=1,#a.t do ret[i]=opwrapper(Pattern.WrapAt(a,i),b) end
+  end
+  return ret
+end
+function Pattern:Substitute(values)
+  local ret=Pattern(self);ret.t={}
+  for i=1,#self.t do ret[i]=Pattern.WrapAt(values,self[i]) end
+  return ret
+end
+function Pattern:SequencedSubstitute(values)
+  local valuesIndices={}
+  local ret=Pattern(self);ret.t={}
+  for i=1,#self.t do
+    local indicesIndex=self[i]
+    if valuesIndices[indicesIndex]==nil then valuesIndices[indicesIndex]=1 end
+    ret[i]=Pattern.WrapAt(Pattern.WrapAt(values,indicesIndex),valuesIndices[indicesIndex])
+    valuesIndices[indicesIndex]=valuesIndices[indicesIndex]+1
+  end
+  return ret
+end
+function Pattern:Expand(by)
+  local ret=Pattern(self);ret.t={}
+  local retIndex=1
+  for i=1,#self.t do
+    for j=1,by do
+      ret[retIndex]=self[i]
+      retIndex=retIndex+1
+    end
+  end
+  return ret
+end
+function Pattern:Replace(a,b)
+  local ret=Pattern(self);ret.t={}
+  for i=1,#self.t do
+    ret[i]=self[i]
+    if ret[i]==a then ret[i]=b end
+  end
+  return ret
+end
+function Pattern:Integrate()
+  local ret=Pattern(self);ret.t={}
+  for i=1,#self.t do
+    ret[i]=self[i]
+    if i>1 then ret[i]=ret[i]+ret[i-1] end
+  end
+  return ret
+end
+function Pattern:Derive()
+  local ret=Pattern(self);ret.t={}
+  for i=1,#self.t do
+    ret[i]=self[i]
+    if i>1 then ret[i]=ret[i]-self[i-1] end
+  end
+  return ret
+end
+function Pattern:QueryEvents(a,b,c)
+  if a>b then local temp=b; b=a; a=temp; end
+  --
+  a=a+self.offset
+  b=b+self.offset
+  if a<0 then a=0 end
+  if b<=0 then return {} end
+  --
+  c=c/self.cycles
+  a=a*c;b=b*c
+  local out={}
+  local span=b-a
+  local step=1/#self.t
+  local i=0
+  local eventOffset=math.floor(a*#self.t+0.5)
+  local startTime=eventOffset/#self.t
+  local numEvents=math.floor(span*#self.t+0.5)
+  if self.parallel~=true then
+     while i<numEvents do
+	local e=self.t[((i+eventOffset)%#self.t)+1]
+	local start=startTime+(i/#self.t)
+	local stop=startTime+((i+1)/#self.t)
+	if type(e)=='table' then
+	   local events=e:QueryEvents(start,stop,#self.t)
+	   for i=1,#events do table.insert(out,events[i]) end
+	else
+	   table.insert(out,{start=start,stop=stop,value=e})
+	end
+	i=i+1
+     end
+  else
+     for i=1,#self.t do
+	local e=self.t[i]
+	local start=a
+	local stop=b
+	if type(e)=='table' then
+	   local events=e:QueryEvents(start,stop,1)
+	   for i=1,#events do table.insert(out,events[i]) end
+	else
+	   table.insert(out,{start=start,stop=stop,value=e})
+	end
+     end
+  end
+  for i=1,#out do
+    out[i].start=out[i].start/c-self.offset
+    out[i].stop=out[i].stop/c-self.offset
+  end
+  return out
+end
+function Pattern:P()
+  local ret=Pattern(self)
+  ret.parallel=true
+  return ret
+end
+function Pattern:Slow(x)
+  local ret=Pattern(self)
+  ret.cycles=x
+  return ret
+end
+function Pattern:Fast(x)
+  local ret=Pattern(self)
+  ret.cycles=1/x
+  return ret
+end
+function Pattern:Offset(x)
+   local ret=Pattern(self)
+   ret.offset=x
+   return ret
+end
+function Pattern:Apply(f)
+  for i=1,#(self.t or self) do
+    local value=self.t[i]
+    if type(value)=='table' then
+      self.t[i]=value:Apply(f)
+    else
+      self.t[i]=f(value,i)
+    end
+  end
+  return self
+end
+function Pattern:MapValues(f) -- backwards compatibilty
+  return self:Apply(f)
+end
+function Pattern:Map(f)
+   local ret=Pattern.new(self)
+   for i=1,#(ret.t or ret) do
+      ret.t[i]=f(ret.t[i],i)
+   end
+   return ret
+end
+function Pattern:Max(func)
+  local ret=self[1]
+  for i=1,#self.t do
+    if self[i]>ret then ret=self[i] end
+  end
+  return ret
+end
+function Pattern:Min(func)
+  local ret=self[1]
+  for i=1,#self.t do
+    if self[i]<ret then ret=self[i] end
+  end
+  return ret
+end
+function Pattern:Normalize(func)
+  local ret=Pattern.new({})
+  local min=self:Min()
+  local max=self:Max()
+  for i=1,#self.t do
+    ret[i]=(self[i]-min)/(max-min)
+  end
+  return ret
+end
+function Pattern:Degree2Pitch(scale,octaveLength)
+   scale = scale or {0,2,3,5,7,8,10}
+   octaveLength = octaveLength or 12
+   local ret=Pattern(self)
+   local function helper(degree)
+      local octave=math.floor(degree/#scale,1)
+      local class=math.fmod(degree,#scale)
+      while class<0 do class=class+#scale end
+      class=class+1
+      return scale[class]+octave*octaveLength
+   end
+   return ret:Apply(helper)
+end
+function Pattern:EdoPitch2Freq(baseNote,baseFreq,divisions,ratio)
+   if divisions==nil then divisions=12 end
+   if baseFreq==nil then baseFreq=440 end
+   if baseNote==nil then baseNote=57 end
+   if ratio==nil then ratio=2 end
+   ret=Pattern(self)
+   local function helper(note)
+      return baseFreq*math.pow(ratio,(note-baseNote)/divisions)
+   end
+   return ret:Apply(helper)
+end
+function Pattern:PitchCompress(low,high,octaveLength)
+   if octaveLength==nil then octaveLength=12 end
+   local ret=Pattern(self)
+   local function helper(pitch)
+      while pitch<low do pitch=pitch+octaveLength end
+      while pitch>high do pitch=pitch-octaveLength end
+      return pitch
+   end
+   return ret:Apply(helper)
+end
+function Pattern:NoRepeats()
+   local ret=Pattern(self)
+   if #ret.t<2 then return ret end
+   for i=2,#ret.t do
+      if ret.t[i]==ret.t[i-1] then
+	 ret.t[i]=Pat{}
+      end
+   end
+   return ret
+end
+function Pattern:Reverse()
+   local ret=Pattern(self);ret.t={}
+   for i=#self.t,1,-1 do
+      ret.t[#ret.t+1]=self[i]
+   end
+   return ret
+end
+function Pattern:__tostring()
+  local function tprint(t)
+    local out='['
+    for i=1,#t do
+      local separator=' '
+      if i==1 then separator='' end
+      if type(t[i])=='table' and #t[i]<1 and #t[i].t<1 then
+        out=out..separator..'_'
+      else
+        out=out..separator..tostring(t[i])
+      end
+    end
+    return out..']'
+  end
+  return tprint(self.t)
+end
+function Pattern:__concat(pat)
+  if pat==nil then return self end
+  local ret=Pattern(self);
+  for i=1,#pat.t do table.insert(ret.t,pat.t[i]) end
+  return ret
+end
+function Pattern.__add(a,b)
+  return Pattern.combine(a,b,function(a,b) return a+b end)
+end
+function Pattern.__sub(a,b)
+  return Pattern.combine(a,b,function(a,b) return a-b end)
+end
+function Pattern.__mul(a,b)
+  return Pattern.combine(a,b,function(a,b) return a*b end)
+end
+function Pattern.__div(a,b)
+  return Pattern.combine(a,b,function(a,b) return a/b end)
+end
+function Pattern.__mod(a,b)
+  return Pattern.combine(a,b,function(a,b) return a%b end)
+end
+function Pattern.__pow(a,b)
+  return Pattern.combine(a,b,function(a,b) return a^b end)
+end
+function Pattern.__unm(self)
+  return Pattern.combine(0,self,function(a,b) return a-b end)
+end
+P=Pattern
+_=P{}
