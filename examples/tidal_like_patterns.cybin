@@ -123,7 +123,7 @@ function p_a(time,dur,val)
 end
 
 --[[ you can execute the following line /w Ctrl-C => Ctrl-C to execute the whole file
-dofile('b.cybin')
+dofile('tidal_like_patterns.cybin')
 --]]
 
 function play(t)

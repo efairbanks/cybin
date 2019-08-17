@@ -1,0 +1,5 @@
+dofile('cylibs/pattern.cybin')
+
+P=Pattern
+p=P('0 1 1 [1 1 0]')
+print(p:Events()[1])
