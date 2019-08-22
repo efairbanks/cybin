@@ -485,7 +485,7 @@ function Pattern.Events(self,start,duration,trunc,offset)
   local pat=Pattern(self)
   local ret={}
   local func=function(x) print(x) end
-  local function ftime(events,dur,offset)
+  local function ftime(events,start,dur,offset)
     local ret={}
     for _,e in ipairs(events) do
       local t=e.time-offset
@@ -499,10 +499,12 @@ function Pattern.Events(self,start,duration,trunc,offset)
   local function p2e(p,start,dur)
     local nevents=0
     local eventi=1
-    for i=1,#p.t do
+    p=p.t
+    print(p)
+    for i=1,#p do
       if _G[p[i]]==nil then nevents=nevents+1 end
     end
-    for i=1,#p.t do
+    for i=1,#p do
       if _G[p[i]]==nil then
 	local lstart=start+(dur*(eventi-1)/nevents)
 	local ldur=dur/nevents
@@ -518,8 +520,8 @@ function Pattern.Events(self,start,duration,trunc,offset)
       end
     end
     return ret
-  end  
-  return ftime(p2e(pat,start or 0,duration or 1),trunc or duration,offset or 0)
+  end
+  return ftime(p2e(pat,start or 0,duration or 1),start or 0,trunc or duration or 1,offset or 0)
 end
 P=Pattern
 _=P{}
