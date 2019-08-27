@@ -1,0 +1,13 @@
+dofile('cylibs/ugen.cybin')
+dofile('cylibs/clodule.cybin')
+dofile('cylibs/pattern.cybin')
+os.execute('jack_connect cybin:audio-out_1 system:playback_1')
+os.execute('jack_connect cybin:audio-out_2 system:playback_2')
+
+--[[
+dofile('20190827.cybin')
+--]]
+
+p=Poly{}
+for i=1,2 do p(Simpler{sample='./sounds/GLASS.AIF',pitch=1}) end
+function __process() return p() end

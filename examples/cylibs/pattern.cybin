@@ -500,7 +500,6 @@ function Pattern.Events(self,start,duration,trunc,offset)
     local nevents=0
     local eventi=1
     p=p.t
-    print(p)
     for i=1,#p do
       if _G[p[i]]==nil then nevents=nevents+1 end
     end

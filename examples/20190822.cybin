@@ -1,0 +1,44 @@
+--[[
+dofile('20190822.cybin')
+--]]
+
+require('cylibs.pattern')
+P=Pattern
+require('cylibs.ugen')
+require('cylibs.clodule')
+
+os.execute('jack_connect cybin:audio-out_1 system:playback_1')
+os.execute('jack_connect cybin:audio-out_2 system:playback_2')
+
+s=Scheduler()
+drums=Poly()
+
+function kick(start,dur,d)
+  if tonumber(d)~=nil then drums(Sampler{sample='./sounds/GABBA.AIF',pitch=math.pow(4/3,d)/2}) end
+end
+function snare(start,dur,d)
+  if tonumber(d)~=nil then drums(Sampler{sample='./sounds/SNARE.AIF'}) end
+end
+function hats(start,dur,d)
+  if tonumber(d)~=nil then drums(Sampler{sample='./sounds/HAT.AIF',duration=d/8,pitch=5,grainDuration=0.01}) end
+end
+function glass(start,dur,x)
+  if tonumber(x)~=nil then
+    drums(Sampler{sample='./sounds/GLASS.AIF',pitch=math.pow(2,x/12)/4,duration=0.15})
+  end
+end
+
+function play()
+  s{events=P('kick 4 [2 1] [3 2 1] 2 [- 4] [2 - 1 2] 3 [2 5]'):Events(s{}.time,2)}
+  s{events=P('snare - 1 - 1'):Events(s{}.time,2)}
+  s{events=P('hats - 1 - 1 - 1 - [1 2]'):Events(s{}.time,2)}
+  s{events=P('glass 7 [12 24 36] 3 [12 15 18 21]'):Events(s{}.time,2)}
+  s{event={time=s{}.time+2,func=play}}
+end
+
+play()
+
+function __process()
+  s()
+  return drums()*0.2
+end

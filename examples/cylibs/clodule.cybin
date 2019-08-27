@@ -134,22 +134,6 @@ function Voice(e)
     return e.env()*math.atan(e.osc()*1.5)
   end
 end
--- a very naive sample-player
-function Sampler(e)
-  e=DC(e) or {}
-  e.index=e.index or 1
-  if type(e.sample)=='string' then e.sample=cybin.loadaudiofile(e.sample) end
-  e.sample=e.sample or {0}
-  e.channels=e.sample.channels or 1
-  e.samplerate=e.sample.samplerate or cybin.samplerate
-  e.done=false
-  return function(p)
-    if type(p)=='table' then return DC(p,e) end
-    e.index=e.index+e.sample.channels
-    if e.done or e.index>=e.sample.frames*e.sample.channels then e.done=true; return 0 end
-    return e.sample[e.index]
-  end
-end
 -- a simple wrapper for voices to support polyphony with automatic freeing when the voices are done playing
 function Poly()
   local e={}
@@ -162,5 +146,39 @@ function Poly()
       end
       return out
     end
+  end
+end
+-- a simple linear interpolating multichannel sampler
+function Simpler(e)
+  e=DC(e) or {}
+  if type(e.sample)=='string' then
+    e.sample=cybin.loadaudiofile(e.sample)
+  end
+  e.samplerate=e.sample.samplerate
+  e.length=e.sample.frames
+  e.channels=e.sample.channels
+  e.pitch=e.pitch or 1
+  e.delta=e.samplerate/cybin.samplerate
+  e.index=0
+  e.done=false
+  function wrap(c,i)
+    while i>=e.length do i=i-e.length end;while i<0 do i=i+e.length end
+    return e.sample[i*e.channels+c]
+  end
+  function interp(c,i)
+    local w,f = math.modf(i)
+    return wrap(c,w)*(1-f)+wrap(c,w+1)*f
+  end
+  return function(p)
+    if type(p)=='table' then
+      if p.offset~=nil then e.index=e.length*p.offset end
+      return DC(p,e)
+    end
+    local out={}
+    for c=1,e.channels do out[c]=interp(c,e.index) end
+    e.index=e.index+e.delta*e.pitch
+    if e.index>e.length-2 then e.index=e.length-2;e.done=true end
+    if e.index<2-e.length then e.index=2-e.length;e.done=true end
+    return unpack(out)
   end
 end
