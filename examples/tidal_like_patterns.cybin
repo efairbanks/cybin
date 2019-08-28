@@ -135,8 +135,8 @@ play(0)
 
 function __process()
   s()
-  local out=p()
-  out=comp(math.atan(m()),out)+out
+  local out=p() or 0
+  out=comp(math.atan(m() or 0),out)+out
   out=verb(out)/10+out
   out=mcomp(out)*2
   return out,out

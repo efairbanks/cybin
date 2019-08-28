@@ -189,7 +189,7 @@ nextEvent(0)
 -- sample processing loop
 function __process()
   s()
-  local o=q()
+  local o=q() or 0
   o=comp(p(),o)+o*1.8
   o=mlim(mcomp((verb(o)/12+o)))*0.5
   return o,o
