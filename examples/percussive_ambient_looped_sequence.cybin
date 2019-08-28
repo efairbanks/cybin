@@ -1,0 +1,68 @@
+dofile('cylibs/ugen.cybin')
+dofile('cylibs/clodule.cybin')
+dofile('cylibs/pattern.cybin')
+P=Pattern
+os.execute('jack_connect cybin:audio-out_1 system:playback_1')
+os.execute('jack_connect cybin:audio-out_2 system:playback_2')
+
+-- instruments, samples, and FX
+p=Poly{}
+s=Scheduler{}
+lcomp=Compressor{threshold=-30,ratio=2,attack=0.005,release=0.015}
+rcomp=Compressor{threshold=-30,ratio=2,attack=0.005,release=0.015}
+reverb=Reverb2{coef=0.95}
+s_gabba=cybin.loadaudiofile('./sounds/GABBA.AIF')
+s_glitch=cybin.loadaudiofile('./sounds/GLITCH.AIF')
+s_glass=cybin.loadaudiofile('./sounds/GLASS.AIF')
+glitch=Simpler{sample=s_glitch}
+s{}.delta=((240/(s_glitch.frames/s_glitch.samplerate))/120)/cybin.samplerate
+
+-- players
+function gabba(s,d,x)
+  if tonumber(x) then
+    p(Simpler{sample=s_gabba,pitch=tonumber(x)})
+  end
+end
+function glass(s,d,x)
+  if tonumber(x) then
+    p(Simpler{sample=s_glass,pitch=math.pow(2,(x)/12),offset=0.1})
+  end
+end
+function gltch(s,d,x)
+  if tonumber(x) then
+    glitch{offset=x/8,pitch=1}
+  end
+end
+
+--[[
+dofile('percussive_ambient_looped_sequence.cybin')
+]]--
+
+-- sequence
+function counter(s,i) _G[s]=(_G[s] or 0)+(i or 1);return _G[s] end
+function play()
+  local len=2
+  local steps=8
+  local offset=len*P('0 1 2 1 1 2 3 4 1 2 1 2 3 4 5 6 7'):WrapAt(counter('secindex'))/steps
+  s{events=P('gabba 1 - - 20 - - [- 60] [1 [100 100]]'):Events(s{}.time,len,len/steps,offset)}
+  s{events=P('gltch 0 - 2 [7 7 7 7] 7 [0 2] 4 5'):Events(s{}.time,len,len/steps,offset)}
+  s{events=P('glass 0 - 5 7 - 3 10 [7 2]'):Events(s{}.time,len,len/steps,offset)}
+  s{event={time=s{}.time+len/steps,func=play}}
+end
+
+-- play
+play()
+
+-- audio rate processing
+function __process()
+  s();
+  local l,r=p()
+  local c=glitch()
+  l=l or 0
+  r=r or 0
+  c=c or 0
+  local verb=reverb(l+r+c)
+  c=c+verb*0.2
+  return lcomp(l+c,l+r+c),rcomp(r+c,l+r+c)
+end
+

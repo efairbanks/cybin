@@ -43,16 +43,17 @@ function Scheduler(e)
   e.time=e.time or 0
   e.delta=e.delta or 1/cybin.samplerate
   function noop() end
+  function counter(s) _G[s]=(_G[s] or 0)+1;return _G[s] end
   return function(p)
     if type(p)=='table' then
       if p.event~=nil then
 	local event=DC(p.event)
-	e.events[tostring(event)]=event
+	e.events['#'..counter(tostring(e))]=event
       end
       if p.events~=nil then
 	for i=1,#p.events do
 	  local event=DC(p.events[i])
-	  e.events[tostring(event)]=event
+	  e.events['#'..counter(tostring(e))]=event
 	end
       end
       return e
@@ -135,22 +136,30 @@ function Voice(e)
   end
 end
 -- a simple wrapper for voices to support polyphony with automatic freeing when the voices are done playing
-function Poly()
-  local e={}
+function Poly(e)
+  local e=DC(e) or {}
   e.voices={}
   return function(v)
-    local out=0
-    if v~=nil then e.voices[tostring(v)]=v; return e else
+    local out={}
+    if v~=nil then
+      local selfName=tostring(e)
+      _G[selfName]=(_G[selfName] or -1)+1
+      local voiceName='#'.._G[selfName]
+      e.voices[voiceName]=v; return e
+    else
       for k,v in pairs(e.voices) do
-	if v{}.done then e.voices[k]=nil else out=out+v() end
+	if v{}.done then e.voices[k]=nil else
+	  local vout={v()}
+	  for i,v in ipairs(vout) do out[i]=(out[i] or 0)+v end
+	end
       end
-      return out
+      return unpack(out)
     end
   end
 end
 -- a simple linear interpolating multichannel sampler
 function Simpler(e)
-  e=DC(e) or {}
+  local temp=e.sample;e.sample=nil;local e=DC(e) or {};e.sample=temp;
   if type(e.sample)=='string' then
     e.sample=cybin.loadaudiofile(e.sample)
   end
@@ -159,15 +168,15 @@ function Simpler(e)
   e.channels=e.sample.channels
   e.pitch=e.pitch or 1
   e.delta=e.samplerate/cybin.samplerate
-  e.index=0
+  e.index=e.length*(e.offset or 0)
   e.done=false
-  function wrap(c,i)
-    while i>=e.length do i=i-e.length end;while i<0 do i=i+e.length end
-    return e.sample[i*e.channels+c]
+  function wrap(buffer,len,channels,c,i)
+    while i>=len do i=i-len end;while i<0 do i=i+len end
+    return buffer[i*channels+c]
   end
-  function interp(c,i)
+  function interp(buffer,len,channels,c,i)
     local w,f = math.modf(i)
-    return wrap(c,w)*(1-f)+wrap(c,w+1)*f
+    return wrap(buffer,len,channels,c,w)*(1-f)+wrap(buffer,len,channels,c,w+1)*f
   end
   return function(p)
     if type(p)=='table' then
@@ -175,7 +184,7 @@ function Simpler(e)
       return DC(p,e)
     end
     local out={}
-    for c=1,e.channels do out[c]=interp(c,e.index) end
+    for c=1,e.channels do out[c]=interp(e.sample,e.length,e.channels,c,e.index) end
     e.index=e.index+e.delta*e.pitch
     if e.index>e.length-2 then e.index=e.length-2;e.done=true end
     if e.index<2-e.length then e.index=2-e.length;e.done=true end
