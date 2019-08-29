@@ -244,7 +244,9 @@ function Pattern:Sum()
 end
 function Pattern.combine(a,b,operator)
   local function opwrapper(a,b)
-  if a==nil or b==nil then
+    if type(a)=='string' and tonumber(a)==nil then return a end
+    if type(b)=='string' and tonumber(a)==nil then return b end
+    if a==nil or b==nil then
       return Pat{}
     else
       return operator(a,b)

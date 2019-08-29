@@ -191,3 +191,19 @@ function Simpler(e)
     return unpack(out)
   end
 end
+-- wavetable osc
+Osc=function(e)
+  e=DC(e) or {}
+  e.delta=e.delta or ((e.freq or 440)/cybin.samplerate)
+  e.phase=e.phase or 0
+  e.table=e.table or {0,1}
+  function clap(t,i) return t[math.max(math.min(i,#t),1)] end
+  return function(p)
+    if type(p)=='table' then return DC(p,e) end
+    e.phase=e.phase+e.delta
+    while e.phase>=1 do e.phase=e.phase-1 end
+    while e.phase<0 do e.phase=e.phase+1 end
+    local w,f=math.modf(e.phase*(#e.table-1)+1)
+    return clap(e.table,w)*(1-f)+clap(e.table,w+1)*f
+  end
+end
