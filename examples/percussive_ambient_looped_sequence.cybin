@@ -39,17 +39,14 @@ dofile('percussive_ambient_looped_sequence.cybin')
 ]]--
 
 -- sequence
-function counter(s,i) _G[s]=(_G[s] or 0)+(i or 1);return _G[s] end
+function counter(s,i,r) _G[s]=(r or _G[s] or 0)+(i or 1);return _G[s] end
 
 function play()
   local len=2
   local steps=8
-  --local offset=len*P('0 1 2 1 1 2 3 4 1 2 1 2 3 4 5 6 7'):WrapAt(counter('secindex'))/steps
-  local offset=len*P('0 1 2 1 1 2 0 3 4 5 1'):WrapAt(counter('secindex'))/steps
   local offset=len*P.GenBjorkStructure(17,{15,math.random(11,13),7,math.random(4,6),3,2,1}):WrapAt(counter('secindex'))/steps
   s{events=P('gabba 1 - - 20 - - [- 60] [1 [100 100]]'):Events(s{}.time,len,len/steps,offset)}
   s{events=P('gltch 0 - 2 [7 7 7 7] 7 [0 2] 4 5'):Events(s{}.time,len,len/steps,offset)}
-  --s{events=P('glass 0 - 5 7 - 3 10 [7 2]'):Events(s{}.time,len,len/steps,offset)}
   s{events=('glass'..(P('[14 7 5 2] 36 - - [- 19] - 12 -')+math.mod(math.floor(counter('fithz')/8)*5,12))):Events(s{}.time,len,len/steps,offset)}
   s{event={time=s{}.time+len/steps,func=play}}
 end
