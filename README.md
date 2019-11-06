@@ -12,7 +12,7 @@ What it does is provide the user with:
 * a Lua interpreter that calls a yet-to-be-defined function called `__process` that recieves an arbitrary number of audio samples _(one per channel)_ and outputs an arbitrary number of audio samples _(one per channel)_ every 1/`cybin.samplerate` seconds
 * a global table called `cybin` that provides some basic audio/music utilties that would be difficult or impossible to provide adequately using a Lua interpreter alone _(audio system info, MIDI I/O, audio file handling, etc...)_
 * a set of command line arguments that may be used to configure your Cybin environment
-* a single, entirely optional Lua library called `cybin.cybin` that contains an opinionated set of tools for creating music and manipulating audio in Lua
+* multiple optional libraries that contain opinionated sets of tools for creating music and manipulating audio in Lua
 * a seamless way to transition from realtime performance and production to offline rendering 
 
 What it does not do is:
