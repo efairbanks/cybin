@@ -1,6 +1,8 @@
 require('cylibs.clodule')
-os.execute('jack_connect cybin:audio-out_1 system:playback_1')
-os.execute('jack_connect cybin:audio-out_2 system:playback_2')
+if not cybin.offline then
+  os.execute('jack_connect cybin:audio-out_1 system:playback_1')
+  os.execute('jack_connect cybin:audio-out_2 system:playback_2')
+end
 
 function Interpolator()
   function wrap0(t,i) while i<0 do i=i+#t end; while i>=#t do i=i-#t end; return t[i+1] end
