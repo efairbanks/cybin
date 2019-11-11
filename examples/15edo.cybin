@@ -1,0 +1,73 @@
+dofile('cylibs/ugen.cybin')
+dofile('cylibs/clodule.cybin')
+dofile('cylibs/pattern.cybin')
+P=Pattern
+if not cybin.offline then
+  os.execute('jack_connect cybin:audio-out_1 system:playback_1')
+  os.execute('jack_connect cybin:audio-out_2 system:playback_2')
+end
+
+-- instruments, scheduler
+p=Poly{}
+s=Scheduler{}
+
+--[[
+dofile('percussive_ambient_looped_sequence.cybin')
+--]]
+
+-- play
+function play()
+  local degree=math.mod(math.floor(s{}.time/4),5)-1
+  local keychg=math.floor(s{}.time/(4*5*3))*9
+  local melody=(P('fmvoice 0 2 1 4 3 5 8'):__mul(3)+degree*3-keychg):PitchCompress(-5*3,7*3,15)
+  local bass=(P('fmvoice 0 0 0'):__mul(3)+degree*3-keychg):PitchCompress(-15*3,-12*3,15)
+  s{events=melody:Events(s{}.time,1)}
+  s{events=bass:Events(s{}.time,1)}
+  s{event={time=s{}.time+1,func=play}}
+end
+
+-- fm voice
+function fmvoice(time,dur,val)
+  if tonumber(val)~=nil then
+    local release=(math.sin(s{}.time/11)+1.02)/2.03
+    local freq=math.pow(2+(math.pow(tuning or 0,2))/2,val/15)*440
+    p(Voice{freq=freq,mfreq=freq*(fmamt or 1),mamp=math.cos(math.pi*time/13)*500+400,env=Env{vals={0,1,0},durs={1/100,release}}})
+  end
+end
+
+-- play
+play()
+
+-- fx (don't use CPU-heavy verb if not offline)
+if not cybin.offline then
+  r=Reverb2{nodes=1,coef=0.77}
+else
+  r=Reverb2{nodes=27,coef=0.77}
+end
+maxVol=0
+f=Filter{filterType='lowpass',reso=0.7}
+hf=Filter{filterType='highpass',reso=0.7}
+sweep=0
+tun=Env{vals={0,0,0,1},durs={20,90,20}}
+fenv=Env{vals={0,1,1,0},durs={20,90,20}}
+fmenv=Env{vals={1,1,1.1,2},durs={20,90,20}}
+c=Compressor{threshold=-30,ratio=4,attack=0.2,release=2,makeup=12}
+
+-- audio rate processing
+function __process()
+  local stime=math.max(s{}.time-1,0)
+  sweep=math.pow(fenv(),4)
+  fmamt=math.pow(fmenv(),0.1)
+  tuning=tun()
+  f:freq(sweep*20000+10)
+  hf:freq((1-sweep)*2000+10)
+  s();
+  local out=(p() or 0)*(1-tuning)
+  out=f(hf(out))/6
+  out=out*math.pow(1-tuning,0.02)
+  out=out+r(out)*2/3
+  out=c(out)
+  maxVol=math.max(out,maxVol)
+  return out,out
+end
+
