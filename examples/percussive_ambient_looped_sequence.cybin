@@ -6,65 +6,68 @@ if not cybin.offline then
   os.execute('jack_connect cybin:audio-out_1 system:playback_1')
   os.execute('jack_connect cybin:audio-out_2 system:playback_2')
 end
--- instruments, samples, and FX
+
+-- instruments, scheduler
 p=Poly{}
 s=Scheduler{}
-lcomp=Compressor{threshold=-30,ratio=2,attack=0.005,release=0.015}
-rcomp=Compressor{threshold=-30,ratio=2,attack=0.005,release=0.015}
-reverb=Reverb2{coef=0.95}
-s_gabba=cybin.loadaudiofile('./sounds/GABBA.AIF')
-s_glitch=cybin.loadaudiofile('./sounds/GLITCH.AIF')
-s_glass=cybin.loadaudiofile('./sounds/GLASS.AIF')
-glitch=Simpler{sample=s_glitch}
-s{}.delta=((240/(s_glitch.frames/s_glitch.samplerate))/120)/cybin.samplerate
-
--- players
-function gabba(s,d,x)
-  if tonumber(x) then
-    p(Simpler{sample=s_gabba,pitch=tonumber(x)})
-  end
-end
-function glass(s,d,x)
-  if tonumber(x) then
-    p(Simpler{sample=s_glass,pitch=math.pow(2,(x)/12),offset=0.1})
-  end
-end
-function gltch(s,d,x)
-  if tonumber(x) then
-    glitch{offset=x/8,pitch=2/math.pow(2,math.random(1,3))}
-  end
-end
 
 --[[
 dofile('percussive_ambient_looped_sequence.cybin')
-]]--
+--]]
 
--- sequence
-function counter(s,i,r) _G[s]=(r or _G[s] or 0)+(i or 1);return _G[s] end
-
+-- play
 function play()
-  local len=2
-  local steps=8
-  local offset=len*P.GenBjorkStructure(17,{15,math.random(11,13),7,math.random(4,6),3,2,1}):WrapAt(counter('secindex'))/steps
-  s{events=P('gabba 1 - - 20 - - [- 60] [1 [100 100]]'):Events(s{}.time,len,len/steps,offset)}
-  s{events=P('gltch 0 - 2 [7 7 7 7] 7 [0 2] 4 5'):Events(s{}.time,len,len/steps,offset)}
-  s{events=('glass'..(P('[14 7 5 2] 36 - - [- 19] - 12 -')+math.mod(math.floor(counter('fithz')/8)*5,12))):Events(s{}.time,len,len/steps,offset)}
-  s{event={time=s{}.time+len/steps,func=play}}
+  local degree=math.mod(math.floor(s{}.time/4),5)-1
+  local keychg=math.floor(s{}.time/(4*5*3))*9
+  local melody=(P('fmvoice 0 2 1 4 3 5 8'):__mul(3)+degree*3-keychg):PitchCompress(-5*3,7*3,15)
+  local bass=(P('fmvoice 0 0 0'):__mul(3)+degree*3-keychg):PitchCompress(-15*3,-12*3,15)
+  s{events=melody:Events(s{}.time,1)}
+  s{events=bass:Events(s{}.time,1)}
+  s{event={time=s{}.time+1,func=play}}
+end
+
+-- fm voice
+function fmvoice(time,dur,val)
+  if tonumber(val)~=nil then
+    local release=(math.sin(s{}.time/11)+1.02)/2.03
+    local freq=math.pow(2+(math.pow(tuning or 0,2))/2,val/15)*440
+    p(Voice{freq=freq,mfreq=freq*(fmamt or 1),mamp=math.cos(math.pi*time/13)*500+400,env=Env{vals={0,1,0},durs={1/100,release}}})
+  end
 end
 
 -- play
 play()
 
+-- fx (don't use CPU-heavy verb if not offline)
+if not cybin.offline then
+  r=Reverb2{nodes=1,coef=0.77}
+else
+  r=Reverb2{nodes=27,coef=0.77}
+end
+maxVol=0
+f=Filter{filterType='lowpass',reso=0.7}
+hf=Filter{filterType='highpass',reso=0.7}
+sweep=0
+tun=Env{vals={0,0,0,1},durs={20,90,20}}
+fenv=Env{vals={0,1,1,0},durs={20,90,20}}
+fmenv=Env{vals={1,1,1.1,2},durs={20,90,20}}
+c=Compressor{threshold=-30,ratio=4,attack=0.2,release=2,makeup=12}
+
 -- audio rate processing
 function __process()
+  local stime=math.max(s{}.time-1,0)
+  sweep=math.pow(fenv(),4)
+  fmamt=math.pow(fmenv(),0.1)
+  tuning=tun()
+  f:freq(sweep*20000+10)
+  hf:freq((1-sweep)*2000+10)
   s();
-  local l,r=p()
-  local c=glitch()
-  l=l or 0
-  r=r or 0
-  c=c or 0
-  local verb=reverb(l+r+c)
-  c=c+verb*0.2
-  return lcomp(l+c,l+r+c),rcomp(r+c,l+r+c)
+  local out=(p() or 0)*(1-tuning)
+  out=f(hf(out))/6
+  out=out*math.pow(1-tuning,0.02)
+  out=out+r(out)*2/3
+  out=c(out)
+  maxVol=math.max(out,maxVol)
+  return out,out
 end
 

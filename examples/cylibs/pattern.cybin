@@ -415,9 +415,12 @@ function Pattern:PitchCompress(low,high,octaveLength)
    if octaveLength==nil then octaveLength=12 end
    local ret=Pattern(self)
    local function helper(pitch)
-      while pitch<low do pitch=pitch+octaveLength end
-      while pitch>high do pitch=pitch-octaveLength end
-      return pitch
+     if tonumber(pitch)~=nil then
+       pitch=tonumber(pitch)
+       while pitch<low do pitch=pitch+octaveLength end
+       while pitch>high do pitch=pitch-octaveLength end
+     end
+     return pitch
    end
    return ret:Apply(helper)
 end
