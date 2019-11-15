@@ -18,7 +18,7 @@ end
 ptuning(17)
 
 -- returns a sinusoidal oscillator function
-function Sin(freq)
+function Saw(freq)
   local phase=0
   local delta=freq/cybin.samplerate
   return function()
@@ -39,7 +39,7 @@ end
 
 -- returns a bleep function (sin osc * exp decay)
 function Bleep(freq,dur,amp)
-  local osc=Sin(freq)
+  local osc=Saw(freq)
   local env=Exp(dur)
   local amp=amp or 1
   return function()
@@ -112,7 +112,7 @@ function xpose(t,n) return apply(t,function(x) return x+n end) end
 -- "fake" generator that calls a function with the supplied name
 -- repeatedly every <dur> seconds
 function Timer(dur,funcName)
-  local phase=dur
+  local phase=-1
   return function()
     if phase>0 then
       phase=phase-1/cybin.samplerate
