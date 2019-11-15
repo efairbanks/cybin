@@ -12,15 +12,15 @@ p=Poly{}
 s=Scheduler{}
 
 --[[
-dofile('percussive_ambient_looped_sequence.cybin')
+dofile('15edo.cybin')
 --]]
 
 -- play
 function play()
   local degree=math.mod(math.floor(s{}.time/4),5)-1
   local keychg=math.floor(s{}.time/(4*5*3))*9
-  local melody=(P('fmvoice 0 2 1 4 3 5 8'):__mul(3)+degree*3-keychg):PitchCompress(-5*3,7*3,15)
-  local bass=(P('fmvoice 0 0 0'):__mul(3)+degree*3-keychg):PitchCompress(-15*3,-12*3,15)
+  local melody=(P('fmvoice 0 6 3 12 9 15 24'):__mul(1)+degree*3-keychg):PitchCompress(-5*3,7*3,15)
+  local bass=(P('fmvoice 0 0 0'):__mul(1)+degree*3-keychg):PitchCompress(-17*3,-12*3,15)
   s{events=melody:Events(s{}.time,1)}
   s{events=bass:Events(s{}.time,1)}
   s{event={time=s{}.time+1,func=play}}
@@ -30,8 +30,17 @@ end
 function fmvoice(time,dur,val)
   if tonumber(val)~=nil then
     local release=(math.sin(s{}.time/11)+1.02)/2.03
-    local freq=math.pow(2+(math.pow(tuning or 0,2))/2,val/15)*440
-    p(Voice{freq=freq,mfreq=freq*(fmamt or 1),mamp=math.cos(math.pi*time/13)*500+400,env=Env{vals={0,1,0},durs={1/100,release}}})
+    local freq=math.pow(2+(math.pow(tuning or 0,2))*2,val/15)*440
+    p(Voice{freq=freq,mfreq=freq*(fmamt or 1)*P({7,1,5,3,4,2}):WrapAt(math.floor(s{}.time*5)+1),mamp=math.cos(math.pi*time/13)*500+400,env=Env{vals={0,1/3,0},durs={1/100,release}}})
+  end
+end
+
+-- fm bass voice
+function fmvoice(time,dur,val)
+  if tonumber(val)~=nil then
+    local release=(math.sin(s{}.time/11)+1.02)/2.03
+    local freq=math.pow(2+(math.pow(tuning or 0,2))*2,val/15)*440
+    p(Voice{freq=freq,mfreq=freq*(fmamt or 1)*P({7,1,5,3,4,2}):WrapAt(math.floor(s{}.time*5)+1),mamp=math.cos(math.pi*time/13)*500+400,env=Env{vals={0,1,0},durs={1/100,release}}})
   end
 end
 
@@ -51,7 +60,7 @@ sweep=0
 tun=Env{vals={0,0,0,1},durs={20,90,20}}
 fenv=Env{vals={0,1,1,0},durs={20,90,20}}
 fmenv=Env{vals={1,1,1.1,2},durs={20,90,20}}
-c=Compressor{threshold=-30,ratio=4,attack=0.2,release=2,makeup=12}
+c=Compressor{threshold=-35,ratio=4,attack=1,release=2,makeup=11}
 
 -- audio rate processing
 function __process()
@@ -60,7 +69,7 @@ function __process()
   fmamt=math.pow(fmenv(),0.1)
   tuning=tun()
   f:freq(sweep*20000+10)
-  hf:freq((1-sweep)*2000+10)
+  hf:freq((1-sweep)*2000+40)
   s();
   local out=(p() or 0)*(1-tuning)
   out=f(hf(out))/6
