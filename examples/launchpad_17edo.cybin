@@ -2,7 +2,9 @@ math.mod=math.mod or math.fmod
 if not(cybin.offline) then
   os.execute('jack_connect cybin:audio-out_1 system:playback_1')
   os.execute('jack_connect cybin:audio-out_2 system:playback_2')
-  os.execute('jack_lsp -c')
+  os.execute('jack_connect Launchpad:midi/playback_1 cybin:midi-in_1')
+  os.execute('jack_connect cybin:midi-out_1 Launchpad:midi/capture_1')
+  os.execute('jack_lsp -cA')
 end
   
 --[[
@@ -47,24 +49,6 @@ function Bleep(freq,dur,amp)
     local out=env()
     if out==nil then return nil else return out*osc()*amp end    
   end
-end
-
--- list of audio generators to process
-voices={}
--- audio processing callback
-function __process()
-  while #cybin.midiin>0 do
-    local x=table.remove(cybin.midiin,1)
-    for k,v in ipairs(x) do print(k,v) end
-    print()
-  end
-  local out=0
-  for k,voice in pairs(voices) do
-    local lout=voice()
-    if lout==nil then voices[k]=nil else out=out+lout end
-  end
-  out=out/8
-  return out,out
 end
 
 -- print all generators
@@ -137,12 +121,49 @@ function play()
   playnote(inv(chord,-40-17,-40,17)[1],17)
 end
 
+-- list of audio generators to process
+voices={}
 -- add our timer to the list of generators to be processed, calling our play function
 voices['timer']=Timer(1.5,'play')
 
+--[[
+dofile('launchpad_17edo.cybin')
+--]]
 
-  
+for k,v in pairs(cybin) do print(k,v) end
 
-
-
+-- audio processing callback
+function __process()
+  while #cybin.midiin>0 do
+    local t=table.remove(cybin.midiin,1)
+    cybin.midiout(t.port,t[1],t[2],t[3])
+    for x=0,7 do
+      for y=0,7 do
+	if math.fmod(x*3+y*4,17)==7 then
+	  cybin.midiout(t.port,144,x+y*16,15)
+	end
+	if math.fmod(x*3+y*4,17)==10 then
+	  cybin.midiout(t.port,144,x+y*16,31)
+	end
+	if math.fmod(x*3+y*4,17)==0 then
+	  cybin.midiout(t.port,144,x+y*16,127)
+	end
+      end
+    end
+    if t[1]==144 then
+      local x=math.fmod(t[2],16)
+      local y=math.floor(t[2]/16)
+      print(x,y)
+      playnote(x*3+y*4-17*3,17)
+    end
+    print()
+  end
+  local out=0
+  for k,voice in pairs(voices) do
+    local lout=voice()
+    if lout==nil then voices[k]=nil else out=out+lout end
+  end
+  out=out/8
+  return out,out
+end
 

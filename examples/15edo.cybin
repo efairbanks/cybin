@@ -1,3 +1,4 @@
+math.mod=math.fmod
 dofile('cylibs/ugen.cybin')
 dofile('cylibs/clodule.cybin')
 dofile('cylibs/pattern.cybin')
