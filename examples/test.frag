@@ -48,24 +48,67 @@ float box(vec3 p, float s)
   return d;
 }
 
-vec2 map(vec3 p)
+vec4 mprop(float mat)
+{
+  if(mat==0.) return vec4(vec3(2.5),-1.);
+  if(mat==1.) return vec4(vec3(0.9,0.8,0.7)*0.5,0.5);
+  if(mat==2.) return vec4(vec3(.7,0.8,0.9),0.05);
+  if(mat==3.) return vec4(vec3(1.,0.8,0.6)*5.,-1.);
+  return vec4(vec3(3.),-1.);
+}
+
+float hbox(vec3 p, float size, float thickness)
 {
   vec3 q=p;
-  for(int i=0;i<4;i++)
+  p=abs(p);
+  float bbox=max(max(abs(p.x),abs(p.z)),abs(p.y))-size;
+  p-=size;
+  float d=max(abs(p.x),abs(p.z))-thickness;
+  d=min(d,max(abs(p.x),abs(p.y))-thickness);
+  d=min(d,max(abs(p.z),abs(p.y))-thickness);
+  d=max(d,bbox);
+  return d;
+}
+
+vec2 map(vec3 p)
+{
+  float e=100.;
+  for(int i=0;i<3;i++)
   {
-    p+=0.1;
+    p.xy=crep(p.xy,3.,u_mouse.x*5./u_resolution.x);
+    p=abs(p);
+    p-=0.4;
+    p.xyz=p.zxy;
+  }
+  //e=min(e,hbox(p,2.,1.2));
+  float f=hbox(p,2.5,1.55555);
+  e=max(e,-f);
+  //g=min(g,max(abs(p.x),abs(p.y))-0.1);
+  float g=max(abs(p.x),abs(p.z))-0.01;
+  p-=5.;
+  g=min(g,max(abs(p.x),abs(p.z))-0.01);
+  g=min(g,max(abs(p.x),abs(p.y))-0.01);
+  return min2(vec2(e,2.),vec2(g,3.));
+}
+
+vec2 map1(vec3 p)
+{
+  vec3 q=p;
+  for(int i=0;i<3;i++)
+  {
     p.xz=crep(p.xz,3.,u_cybin);
+    p+=0.1;
     float t=p.x;p.x=p.y;p.y=p.z;p.z=t;
   }
   vec2 d = vec2(max(box(abs(p)-.5,.3),-box(p,.7)),1.);
-  d=min2(d,vec2(-length(q)+10.,0.));
+  d=min2(d,vec2(max(-q.y+1.4,length(q.xz)-2.),2.));
   d=min2(d,vec2(length(q)-0.3,0.));
   return d;
 }
 
 vec3 gradient(vec3 p)
 {
-  vec2 e=vec2(0.,0.001);
+  vec2 e=vec2(0.,0.01);
   return normalize(vec3(map(p+e.yxx).x-map(p-e.yxx).x,
         map(p+e.xyx).x-map(p-e.xyx).x,
         map(p+e.xxy).x-map(p-e.xxy).x));
@@ -75,49 +118,52 @@ vec3 diffuse(vec3 r, vec3 p, float a)
 {
   vec3 x=cross(r,vec3(0.,1.,0.));
   vec3 y=cross(r,x);
-  return r+x*rand31(p)*a+y*rand31(p.zxy*PI)*a; 
+  return r+x*rand31(p+u_time)*a+y*rand31(p.zxy*PI+u_time)*a; 
 }
 
+#define MAX_DIST 20.
 vec2 march(vec3 o, vec3 r, float it)
 {
   float t=it;
-  for(int i=0;i<50;i++)
+  for(int i=0;i<90;i++)
   {
     vec2 res=map(o+r*t);
     float d=res.x;
-    if(d<0.02) return vec2(t,res.y);
-    t+=max(0.002,d*0.9);
+    if(d<0.001) return vec2(t,res.y);
+    if(t>MAX_DIST) return vec2(MAX_DIST,-1.);
+    t+=max(0.002,d*0.75);
   }
-  return vec2(t,0.);
+  return vec2(MAX_DIST,-1.);
 }
+
 
 vec3 pixel(vec2 uv)
 {
   float u_time=u_time/5.;
   vec3 o=vec3(cos(u_time),0.,sin(u_time))*10.*u_mouse.x/u_resolution.x;
-  o=u_cam;
+  o=u_cam*2.;
   vec3 t=vec3(0.);
 
   vec3 r=look(uv,o,t);
 
   float dt=0.;
   float maxd=10.;
-  float mat=0.;
-  float lum=0.;
-  float ab=1.;
+  vec4 mat=vec4(0.);
+  vec3 lum=vec3(0.);
+  vec3 ab=vec3(1.);
   vec2 res=march(o,r,0.1);
   for(int i=0;i<6;i++)
   {
     vec2 res=march(o,r,0.05);
     float d=res.x;
     dt+=d;
-    mat=res.y;
-    if(mat==0.) {lum+=2.5;break;}
-    if(mat==1.) ab*=0.6;
+    mat=mprop(res.y);
+    if(mat.a<0.) {lum+=mat.rgb;break;}
+    ab*=mat.rgb;
     vec3 p=o+r*d-0.005;
     vec3 n=gradient(p);
     o=p;
-    r=reflect(diffuse(r,o,0.3),n);
+    r=reflect(diffuse(r,o,mat.a),n);
   }
   return vec3(lum*ab/pow(1.15,dt));
 }
@@ -128,7 +174,7 @@ void main (void) {
   vec3 color=vec3(1.);
 #ifdef BUFFER_0
   vec3 last=texture2D(u_buffer1,uv).rgb;
-  if(random(uv*u_time)>1./16.)
+  if(random(uv*u_time)>1./30.)
   {
     gl_FragColor = vec4(last,1.);
     return;

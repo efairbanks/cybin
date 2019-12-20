@@ -1,5 +1,13 @@
 Pattern={}
 setmetatable(Pattern, {__call = function (cls, ...) return cls.new(...) end,})
+-- table deep copy
+local function DC(t,c)
+  if type(t)~='table' then return t end
+  local r=c or {}
+  for k,v in pairs(t) do r[k]=DC(v) end
+  for i,v in ipairs(t) do r[i]=DC(v) end
+  return r
+end
 Pattern.__index=function(t,k)
   if type(k)=='number' then
     return t.t[k]
@@ -486,7 +494,7 @@ function Pattern.__unm(self)
   return Pattern.combine(0,self,function(a,b) return a-b end)
 end
 function Pattern.Events(self,start,duration,trunc,offset)
-  function _EQ(a,b) if math.abs(a-b)>0.000001 then return false else return true end end
+  local function _EQ(a,b) if math.abs(a-b)>0.000001 then return false else return true end end
   local pat=Pattern(self)
   local ret={}
   local func=function(x) print(x) end
@@ -527,5 +535,8 @@ function Pattern.Events(self,start,duration,trunc,offset)
   end
   return ftime(p2e(pat,start or 0,duration or 1),start or 0,trunc or duration or 1,offset or 0)
 end
-P=Pattern
-_=P{}
+function Pattern.load()
+  P=Pattern
+  _=P{}
+end
+return Pattern

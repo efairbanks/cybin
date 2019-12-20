@@ -2,10 +2,9 @@
 dofile('noisy_highhats_sequence.cybin')
 --]]
 
-require('cylibs.pattern')
-P=Pattern
+require('cylibs.pattern').load()
 require('cylibs.ugen')
-require('cylibs.clodule')
+require('cylibs.clodule').load()
 
 if not(cybin.offline) then
   os.execute('jack_connect cybin:audio-out_1 system:playback_1')

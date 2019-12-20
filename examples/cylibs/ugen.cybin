@@ -4,8 +4,33 @@ UGen
 
 This library uses metatables to provide a set of DSP/music modules that loosely mimic UGens from SuperCollider. Many of these UGen are quite resource-hungry, and some of them are very complicated. They all should expose a method called "Process" that returns an audio sample each time it is called.
 
---]]
+UGens:
+ * UGen (generic)
+ * Oscillators
+   * Pulse
+   * Saw
+   * Sin
+   * Tri
+ * Filters
+   * Filter (configurable biquadratic multi-mode filter)
+   * Allpass
+   * Delay
+   * Comb
+   * Reverb (allpass network reverb)
+   * Reverb2 (nicer allpass network reverb)
+ * Metro (event scheduler that accepts patterns from the Pat lib)
+ * Sampler (multichannel granular sampler -- RESOURCE HEAVY)
+ * Env (envelope generator)
+ * Poly (polyphonic wrapper for synth voices)
+ * FMVoice (frequency modulation synth voice)
+ * Pluck (simple subtractive synth voice)
 
+--]]
+-- store copy of global environment so we can separate this stuff --
+-- into its own namespace later ------------------------------------
+local _GCOPY={}
+for k,v in pairs(_G) do _GCOPY[k]=v end
+--------------------------------------------
 UGen={__call=function(self,...) return self:Set(...) end}
 UGen.__index=UGen
 setmetatable(UGen,{__call=function(cls,...) return cls.new(...) end})
@@ -469,8 +494,6 @@ function Sampler:GetChannels(i)
     local currentSample=self.sample[intIndex*self.sample.channels+j-1] or 0
     local nextSample=self.sample[intNextIndex*self.sample.channels+j-1] or currentSample
     out[j]=(currentSample*(1-fracIndex)+nextSample*fracIndex)*self.amp
-    -- simplified version doesn't work even though mathematically equivalent?????
-    --out[j]=currentSample-(currentSample+nextSample)*fracIndex
   end
   return out
 end
@@ -817,3 +840,15 @@ function Pluck:Process()
    return self.filter:Process(self.comb:Process(self.osc:Process()))*env
 end
 --------------------------------------------
+-- store everything we've created in a namespace
+local P={}
+for k,v in pairs(_G) do
+  if _GCOPY[k]==nil then
+    _G[k]=nil
+    P[k]=v
+  end
+end
+UGen=P
+-- option to load our namespace back into the global environment
+UGen.load=function() for k,v in pairs(UGen) do _G[k]=v end end
+return UGen
