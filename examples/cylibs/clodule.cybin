@@ -46,11 +46,17 @@ local function Scheduler(e)
       if p.event~=nil then
 	local event=DC(p.event)
 	e.events['#'..counter(tostring(e))]=event
-      end
-      if p.events~=nil then
-	for i=1,#p.events do
-	  local event=DC(p.events[i])
-	  e.events['#'..counter(tostring(e))]=event
+      else
+	if p.events~=nil then
+	  for i=1,#p.events do
+	    local event=DC(p.events[i])
+	    e.events['#'..counter(tostring(e))]=event
+	  end
+	else
+	  for i=1,#p do
+	    local event=DC(p[i])
+	    e.events['#'..counter(tostring(e))]=event
+	  end
 	end
       end
       return e
@@ -119,11 +125,13 @@ local function Osc(e)
   end
   e=DC(e) or {}
   e.delta=e.delta or ((e.freq or 440)/cybin.samplerate)
+  e.freq=nil
   e.phase=e.phase or 0
   e.table=e.table or math.SIN_LUT
   local function clap(t,i) return t[math.max(math.min(i,#t),1)] end
   return function(p)
     if type(p)=='table' then return DC(p,e) end
+    if e.freq~=nil then e.delta=e.freq/cybin.samplerate end
     e.phase=e.phase+e.delta
     while e.phase>=1 do e.phase=e.phase-1 end
     while e.phase<0 do e.phase=e.phase+1 end
@@ -138,17 +146,17 @@ local function Voice(e)
   end
   e=DC(e) or {}
   e.env=e.env or Env()
-  e.osc=e.osc or Sin()
+  e.osc=e.osc or Osc()
   e.freq=e.freq or 440
   e.mfreq=e.mfreq or 660
-  e.mod=e.mod or Sin{}
+  e.mod=e.mod or Osc()
   e.mamp=e.mamp or 500
   e.done=false
   return function(p)
     if type(p)=='table' then return DC(p,e) end
     if e.env{}.done then e.done=true; return 0 end
-    e.mod{freq=cx(e.mfreq)}
-    e.osc{freq=e.mod()*cx(e.mamp)+cx(e.freq)}
+    e.mod{}.freq=cx(e.mfreq)
+    e.osc{}.freq=e.mod()*cx(e.mamp)+cx(e.freq)
     return e.env()*math.atan(e.osc()*1.5)
   end
 end

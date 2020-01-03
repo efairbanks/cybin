@@ -1,0 +1,37 @@
+require('cylibs.pattern').load()
+C=require('cylibs.clodule')
+require('cylibs.ugen').load()
+os.execute('jack_connect cybin:audio-out_1 system:playback_1')
+os.execute('jack_connect cybin:audio-out_2 system:playback_2')
+s=C.Scheduler()
+p=C.Poly()
+function Counter(name)
+  if _G[name]==nil then _G[name]=1 else _G[name]=_G[name]+1 end; return _G[name]
+end
+
+--[[
+dofile('12_20_2019.cybin')
+--]]
+
+function voice(t,d,x)
+  if P.GenBjork(6,23):WrapAt(Counter('vrhythm'))==0 then
+    --p(C.Voice{freq=math.pow(2,x/19)*440,mfreq=math.pow(2,x/19)*880*4,mamp=500})
+  else
+    p(C.Voice{freq=math.pow(2,x/19)*55,mfreq=math.pow(2,x/19)*55*4,mamp=400})
+  end
+end
+
+function phrase(t,d,x)
+  s(P('voice [0 2 3 5 6 4 2 1 0 -2 -3 -5 -4 -2 -1 2]'):__mul(8):__add(math.floor(t/6)*3):PitchCompress(-10,10,19):Events(t,d))
+  s({{time=t+d,func=function() phrase(t+d,d) end}})
+end
+
+phrase(s{}.time,4)
+
+verb=Reverb2()
+function __process()
+  s()
+  local out=p()
+  out=verb(out)/2+out
+  return out,out
+end
