@@ -1,6 +1,6 @@
 require('cylibs.pattern').load()
 C=require('cylibs.clodule')
-require('cylibs.ugen').load()
+require('cylibs.ugen')
 os.execute('jack_connect cybin:audio-out_1 system:playback_1')
 os.execute('jack_connect cybin:audio-out_2 system:playback_2')
 s=C.Scheduler()

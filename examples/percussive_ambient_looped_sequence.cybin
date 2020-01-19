@@ -1,4 +1,5 @@
-dofile('cylibs/ugen.cybin').load()
+math.mod=math.fmod
+dofile('cylibs/ugen.cybin')
 dofile('cylibs/clodule.cybin').load()
 dofile('cylibs/pattern.cybin').load()
 if not cybin.offline then
