@@ -51,10 +51,10 @@ float box(vec3 p, float s)
 vec2 map(vec3 p)
 {
   vec3 q=p;
-  for(int i=0;i<4;i++)
+  for(int i=0;i<9;i++)
   {
     p+=0.1;
-    p.xz=crep(p.xz,3.,u_cybin);
+    p.xz=crep(p.xz,2.,u_cybin);
     float t=p.x;p.x=p.y;p.y=p.z;p.z=t;
   }
   vec2 d = vec2(max(box(abs(p)-.5,.3),-box(p,.7)),1.);
@@ -128,12 +128,12 @@ void main (void) {
   vec3 color=vec3(1.);
 #ifdef BUFFER_0
   vec3 last=texture2D(u_buffer1,uv).rgb;
-  if(random(uv*u_time)>1./16.)
+  if(random(uv*u_time)>2./5.)
   {
     gl_FragColor = vec4(last,1.);
     return;
   }
-  float c=3./5.;
+  float c=2./5.;
   color=pixel(xy)*c+last*(1.-c);
 #elif defined(BUFFER_1)
   color=texture2D(u_buffer0,gl_FragCoord.xy/u_resolution.x).rgb;
