@@ -8,7 +8,7 @@ dofile('viewerglsl.cybin')
 
 function glStart(frag)
   if cybin.gl==nil and frag~=nil then
-    cybin.gl=io.popen('glslViewer '..frag..' >> /dev/null','w')
+    cybin.gl=io.popen('glslViewer -w 400 -h 400 '..frag..' >> /dev/null','w')
     cybin.gl:setvbuf('line')
   end
 end
@@ -45,7 +45,7 @@ function __process()
     _G['counter']=(_G['counter'] or 0)+1
   else
     _G['counter']=0
-    _G['subcounter']=math.mod((_G['subcounter'] or -1)+1,180)
+    _G['subcounter']=math.mod((_G['subcounter'] or -1)+1,500)
     if _G['subcounter']==0 then
       D=D+math.random()*math.pi*10
       M=math.random()*6-3
@@ -54,6 +54,6 @@ function __process()
     glSetUniform('u_cybin',mlag(M,0.05))
     glSetUniform('u_cam',x,-1,z)
   end
-  return math.random()*0.1*(math.sin(time)*0.5+0.5)
+  return 0
 end
 

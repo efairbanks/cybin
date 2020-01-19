@@ -1,5 +1,13 @@
 Pattern={}
 setmetatable(Pattern, {__call = function (cls, ...) return cls.new(...) end,})
+-- table deep copy
+local function DC(t,c)
+  if type(t)~='table' then return t end
+  local r=c or {}
+  for k,v in pairs(t) do r[k]=DC(v) end
+  for i,v in ipairs(t) do r[i]=DC(v) end
+  return r
+end
 Pattern.__index=function(t,k)
   if type(k)=='number' then
     return t.t[k]
@@ -247,7 +255,7 @@ function Pattern.combine(a,b,operator)
     if type(a)=='string' and tonumber(a)==nil then return a end
     if type(b)=='string' and tonumber(a)==nil then return b end
     if a==nil or b==nil then
-      return Pat{}
+      return Pattern{}
     else
       return operator(a,b)
     end
@@ -258,10 +266,10 @@ function Pattern.combine(a,b,operator)
   elseif type(b)=='table' then
     ret=Pattern(b);ret.t={}
   else
-    ret=Pat{}
+    ret=Pattern{}
   end
   if a==nil or b==nil then
-    ret=Pat{}
+    ret=Pattern{}
   elseif type(a)=="table" and type(b)=="table" then
     for i=1,math.max(#a.t,#b.t) do ret[i]=opwrapper(Pattern.WrapAt(a,i),Pattern.WrapAt(b,i)) end
   elseif type(a)=="number" and type(b)=="table" then
@@ -429,7 +437,7 @@ function Pattern:NoRepeats()
    if #ret.t<2 then return ret end
    for i=2,#ret.t do
       if ret.t[i]==ret.t[i-1] then
-	 ret.t[i]=Pat{}
+	 ret.t[i]=Pattern{}
       end
    end
    return ret
@@ -486,7 +494,7 @@ function Pattern.__unm(self)
   return Pattern.combine(0,self,function(a,b) return a-b end)
 end
 function Pattern.Events(self,start,duration,trunc,offset)
-  function _EQ(a,b) if math.abs(a-b)>0.000001 then return false else return true end end
+  local function _EQ(a,b) if math.abs(a-b)>0.000001 then return false else return true end end
   local pat=Pattern(self)
   local ret={}
   local func=function(x) print(x) end
@@ -527,5 +535,8 @@ function Pattern.Events(self,start,duration,trunc,offset)
   end
   return ftime(p2e(pat,start or 0,duration or 1),start or 0,trunc or duration or 1,offset or 0)
 end
-P=Pattern
-_=P{}
+function Pattern.load()
+  P=Pattern
+  _=P{}
+end
+return Pattern
