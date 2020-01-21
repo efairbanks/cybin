@@ -1,3 +1,4 @@
+math.mod=math.fmod
 require('cylibs.clodule').load()
 require('cylibs.utils').load()
 if not cybin.offline then

@@ -26,10 +26,6 @@ UGens:
  * Pluck (simple subtractive synth voice)
 
 --]]
--- store copy of global environment so we can separate this stuff --
--- into its own namespace later ------------------------------------
-local _GCOPY={}
-for k,v in pairs(_G) do _GCOPY[k]=v end
 --------------------------------------------
 UGen={__call=function(self,...) return self:Set(...) end}
 UGen.__index=UGen
@@ -840,15 +836,3 @@ function Pluck:Process()
    return self.filter:Process(self.comb:Process(self.osc:Process()))*env
 end
 --------------------------------------------
--- store everything we've created in a namespace
-local P={}
-for k,v in pairs(_G) do
-  if _GCOPY[k]==nil then
-    _G[k]=nil
-    P[k]=v
-  end
-end
-UGen=P
--- option to load our namespace back into the global environment
-UGen.load=function() for k,v in pairs(UGen) do _G[k]=v end end
-return UGen

@@ -1,5 +1,10 @@
+math.mod=math.fmod
 os.execute('jack_lsp -c -A')
 os.execute('jack_connect cybin:audio-out_1 system:playback_1')
+
+--[[
+dofile('viewerglsl.cybin')
+--]]
 
 function glStart(frag)
   if cybin.gl==nil and frag~=nil then

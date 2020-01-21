@@ -1,3 +1,4 @@
+math.mod=math.mod or math.fmod
 if not(cybin.offline) then
   os.execute('jack_connect cybin:audio-out_1 system:playback_1')
   os.execute('jack_connect cybin:audio-out_2 system:playback_2')
@@ -5,7 +6,7 @@ if not(cybin.offline) then
 end
   
 --[[
-dofile('tuning.cybin') -- ctl-C ctl-C this line to execute whole file
+dofile('17edo_from_scratch.cybin') -- ctl-C ctl-C this line to execute whole file
 --]]
 
 -- print ratios for a given EDO tuning system
@@ -52,6 +53,11 @@ end
 voices={}
 -- audio processing callback
 function __process()
+  while #cybin.midiin>0 do
+    local x=table.remove(cybin.midiin,1)
+    for k,v in ipairs(x) do print(k,v) end
+    print()
+  end
   local out=0
   for k,voice in pairs(voices) do
     local lout=voice()
@@ -134,9 +140,6 @@ end
 -- add our timer to the list of generators to be processed, calling our play function
 voices['timer']=Timer(1.5,'play')
 
---[[
-dofile('tuning.cybin') -- ctl-C ctl-C this line to execute whole file
---]]
 
   
 

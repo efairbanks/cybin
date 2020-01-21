@@ -1,4 +1,5 @@
-require('cylibs.ugen').load()
+math.mod=math.fmod
+require('cylibs.ugen')
 require('cylibs.clodule').load()
 require('cylibs.utils').load()
 os.execute('jack_lsp -c')
