@@ -1,0 +1,112 @@
+function DC(t,c)
+  if type(t)~='table' then return t end
+  local r=c or {}
+  for k,v in pairs(t) do r[k]=DC(v) end
+  for i,v in ipairs(t) do r[i]=DC(v) end
+  return r
+end
+function sort(t) t=DC(t);table.sort(t);return t;end
+function iapply(t,f)
+  t=DC(t)
+  for k,v in ipairs(t) do t[k]=f(k,v) end
+  return t
+end
+function wrap(t,i)
+  i=math.floor(i)
+  while i<1 do i=i+#t end
+  while i>#t do i=i-#t end
+  return t[i]
+end
+
+function Index2Pitch(i,set,edo)
+  i=math.max(i,0)
+  set=iapply(set,function(k,v) return math.fmod(v,edo) end)
+  set=sort(set)
+  return set[math.fmod(i,#set)+1]+math.floor(i/#set)*edo
+end
+
+function Pitch2Index(p,set,edo)
+  local octw=#set
+  set=iapply(set,function(k,v) return math.fmod(v,edo) end)
+  set=sort(set)
+  table.insert(set,#set+1,set[1]+edo)
+  table.insert(set,1,set[#set]-edo)
+  local octave=0
+  local pc=p;while pc-edo>0 do pc=pc-edo;octave=octave+1 end
+  local ci=2
+  for k,v in ipairs(set) do
+    if math.abs(v-pc)<math.abs(set[ci]-pc) then ci=k end
+  end
+  ci=ci-2
+  while ci>octw do ci=ci-octw;octave=octave+1;end
+  while ci<0 do ci=ci+octw;octave=octave-1;end 
+  ci=ci+octave*octw
+  return ci
+end
+
+--[[
+dofile('idk.cybin')
+--]]
+
+function Sin(freq)
+  local phase=0
+  return function()
+    phase=phase+freq/(cybin.samplerate or 48000)
+    return math.atan(math.sin(phase*2*math.pi)*3)
+  end
+end
+
+function Line(a,b,dur)
+  local phase=0
+  return function()
+    if phase<dur then phase=phase+1/(cybin.samplerate or 48000) end
+    return a*(1-phase/dur)+b*phase/dur
+  end
+end
+
+function Trig(dur)
+  phase=0
+  return function(f)
+    phase=phase+1/(cybin.samplerate or 48000)
+    while phase>dur do f();phase=phase-dur end
+  end
+end
+
+----------------------------------
+
+set={0,15,19}
+sets=
+  {
+    {5,8,12},
+    {8,12,15},
+    {7,10,14,2},
+    {0,3,7}
+  }
+edo=12
+lastPitch=60
+maxPitch=85
+minPitch=60
+osc=Sin(440)
+env=Line(1,0,1)
+trig=Trig(0.15)
+tick=0
+
+function __process()
+  trig(function()
+      env=Line(1,0,1)
+      local set=wrap(sets,tick/16)
+      tick=tick+1
+      local index=Pitch2Index(lastPitch,set,edo)
+      local newPitch=Index2Pitch(wrap({3,-1,-1,2,-1,-1,-1,1},tick)+index,set,edo)
+      lastPitch=math.min(maxPitch,math.max(minPitch,newPitch))
+      local freq=math.pow(2,newPitch/12)*55/8
+      osc=Sin(freq)
+  end)
+  local out=osc()*math.pow(env(),7)*0.2
+  return out,out
+end
+
+print(math.random(-1,1))
+
+os.execute('jack_connect cybin:audio-out_1 system:playback_1')
+os.execute('jack_connect cybin:audio-out_2 system:playback_2')
