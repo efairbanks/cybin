@@ -1,0 +1,178 @@
+function DC(t,c)
+  if type(t)~='table' then return t end
+  local r=c or {}
+  for k,v in pairs(t) do r[k]=DC(v) end
+  for i,v in ipairs(t) do r[i]=DC(v) end
+  return r
+end
+function sort(t) t=DC(t);table.sort(t);return t;end
+function iapply(t,f)
+  t=DC(t)
+  for k,v in ipairs(t) do t[k]=f(k,v) end
+  return t
+end
+function wrap(t,i)
+  i=math.floor(i)
+  while i<1 do i=i+#t end
+  while i>#t do i=i-#t end
+  return t[i]
+end
+function E(n,d)
+  local function rep(x,n)
+    local ret={}; for i=1,n do ret[#ret+1]=DC(x) end; return ret
+  end
+  if n==0 then return rep(0,d) end
+  if n>=d then return rep(1,d) end
+  local function concat(a,b)
+    for i=1,#b do a[#a+1]=b[i] end
+  end
+  local function flat(t,ret)
+    ret=ret or {}
+    for _,v in ipairs(t) do
+      if type(v)=='table' then
+	flat(v,ret)
+      else
+	ret[#ret+1]=v
+      end
+    end
+    return ret
+  end
+  local ns=rep({1},n);local ds=rep({0},d-n);local nsi=nil
+  while true do
+    for i=1,#ds do
+      nsi=math.fmod(i-1,#ns)+1
+      concat(ns[nsi],ds[i])
+    end
+    if #ns-nsi<2 then break end
+    ds=ns
+    ns={}
+    while nsi>0 do ns[#ns+1]=table.remove(ds,1);nsi=nsi-1 end
+  end
+  return flat(ns)
+end
+
+function Pitch2Freq(p,basef,edo) return math.pow(2,p/edo-edo)*basef end
+function Freq2Pitch(f,basef,edo) return (math.log(f/basef)/math.log(2)+edo)*edo end
+
+function Index2Pitch(i,set,edo)
+  i=math.max(i,0)
+  set=iapply(set,function(k,v) return math.fmod(v,edo) end)
+  set=sort(set)
+  return set[math.fmod(i,#set)+1]+math.floor(i/#set)*edo
+end
+
+function Pitch2Index(p,set,edo)
+  local octw=#set
+  set=iapply(set,function(k,v) return math.fmod(v,edo) end)
+  set=sort(set)
+  table.insert(set,#set+1,set[1]+edo)
+  table.insert(set,1,set[#set]-edo)
+  local octave=0
+  local pc=p;while pc-edo>0 do pc=pc-edo;octave=octave+1 end
+  local ci=2
+  for k,v in ipairs(set) do
+    if math.abs(v-pc)<math.abs(set[ci]-pc) then ci=k end
+  end
+  ci=ci-2
+  while ci>octw do ci=ci-octw;octave=octave+1;end
+  while ci<0 do ci=ci+octw;octave=octave-1;end 
+  ci=ci+octave*octw
+  return ci
+end
+
+function Sin(freq)
+  local phase=0
+  local freq=freq or 440
+  return function(f)
+    freq=f or freq
+    phase=phase+freq/(cybin.samplerate or 48000)
+    return math.atan(math.sin(phase*2*math.pi)*10)
+  end
+end
+
+function Line(a,b,dur)
+  local phase=0
+  return function()
+    if phase<dur then phase=phase+1/(cybin.samplerate or 48000) end
+    return a*(1-phase/dur)+b*phase/dur
+  end
+end
+
+function Lag(coef)
+  local last=nil
+  return function(x)
+    last=last or x
+    last=x*coef+last*(1-coef)
+    return last
+  end
+end
+
+function Trig(dur)
+  phase=0
+  return function(f)
+    phase=phase+1/(cybin.samplerate or 48000)
+    while phase>dur do f();phase=phase-dur end
+  end
+end
+
+----------------------------------
+
+set={0,15,19}
+
+sets=
+  {
+    {5,8,12},
+    {8,12,15},
+    {7,10,14,2},
+    {0,3,7}
+  }
+
+edo=12
+baseFreq=440/32
+lastPitch=60
+plag=Lag(1/150)
+
+maxPitch=Freq2Pitch(710,baseFreq,edo)
+minPitch=Freq2Pitch(150,baseFreq,edo)
+
+osc=Sin(440)
+env=Line(1,0,1)
+elag=Lag(0.01)
+trig=Trig(0.12)
+tick=0
+freq=0
+
+f=Pitch2Freq(3,440,13)
+f=Freq2Pitch(f,440,13)
+
+--[[
+dofile('arp_2.cybin')
+--]]
+
+require('cylibs.ugen')
+r=Reverb2{}
+
+updown=iapply(E(6,17),function(i,x) if x==0 then return -2 else return 5 end end)
+function __process()
+  trig(function()
+      local set=wrap(sets,tick/16)
+      local index=Pitch2Index(lastPitch,set,edo)
+      local newPitch=Index2Pitch(wrap(updown,tick)+index,set,edo)
+      lastPitch=math.min(maxPitch,math.max(minPitch,newPitch))
+      if wrap(E(7,13),tick)==1 then
+	env=Line(1,0,0.7)
+	freq=Pitch2Freq(newPitch,baseFreq,edo)
+      end
+      tick=tick+1
+  end)
+  local out=osc(plag(freq))*elag(math.pow(env(),15))*0.2
+  out=r(out)*2/3+out
+  return out,out
+end
+
+--[[
+dofile('arp_2.cybin')
+--]]
+
+os.execute('jack_connect cybin:audio-out_1 system:playback_1')
+os.execute('jack_connect cybin:audio-out_2 system:playback_2')
