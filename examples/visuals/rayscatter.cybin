@@ -3,7 +3,7 @@ os.execute('jack_lsp -c -A')
 os.execute('jack_connect cybin:audio-out_1 system:playback_1')
 
 --[[
-dofile('viewerglsl.cybin')
+dofile('rayscatter.cybin')
 --]]
 
 function glStart(frag)
@@ -30,11 +30,7 @@ end
 math.c2p=function(x,y) return math.atan(y,x), math.sqrt(math.pow(x,2)+math.pow(y,2)) end
 math.p2c=function(d,m) return math.cos(d)*m, math.sin(d)*m end
 
---[[
-dofile('viewerglsl.cybin')
---]]
-
-glStart('test.frag')
+glStart('rayscatter.frag')
 dlag=Lag()
 mlag=Lag()
 D=0
@@ -56,4 +52,3 @@ function __process()
   end
   return 0
 end
-
