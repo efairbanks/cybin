@@ -9,6 +9,7 @@ It is an alternative/supplement to the UGen lib. It can be used alongside it if 
 The philosophy of this lib is to keep things as simple, concise, and efficient as possible.
 
 --]]
+Clodule={}
 -- table deep copy
 local function DC(t,c)
   if type(t)~='table' then return t end
@@ -24,7 +25,7 @@ local function wrap(t,i)
   return t[i]
 end
 -- trigger a function on falling edge
-local function Trigger(e)
+function Clodule.Trigger(e)
   e=DC(e) or {}
   return function(p,f)
     if type(p)=='table' then return DC(p,e) end
@@ -34,7 +35,7 @@ local function Trigger(e)
   end
 end
 -- a simple audio-rate event scheduler
-local function Scheduler(e)
+function Clodule.Scheduler(e)
   e=DC(e) or {}
   e.events=e.events or {}
   e.time=e.time or 0
@@ -72,7 +73,7 @@ local function Scheduler(e)
   end
 end
 -- a simple envelope-generator
-local function Line(e)
+function Clodule.Line(e)
   e=DC(e) or {}
   e.phase=e.phase or 0
   e.delta=e.delta or 1/cybin.samplerate
@@ -85,7 +86,7 @@ local function Line(e)
   end
 end
 -- a counter
-local function Counter(e)
+function Clodule.Counter(e)
   e=DC(e) or {}
   return function(p)
     if type(p)=='table' then return DC(p,e) end
@@ -94,14 +95,14 @@ local function Counter(e)
   end
 end
 -- a more sophisticated envelope-generator
-local function Env(e)
+function Clodule.Env(e)
   e=DC(e) or {}
   e.vals=e.vals or {0,1,0}
   e.durs=e.durs or {0.01,1}
   e.exps=e.exps or {1}
   e.index=1
   e.done=false
-  e.line=Line{}
+  e.line=Clodule.Line{}
   return function(p)
     if type(p)=='table' then return DC(p,e) end
     local i=math.min(e.line(),1)
@@ -118,7 +119,7 @@ local function Env(e)
   end
 end
 -- wavetable osc
-local function Osc(e)
+function Clodule.Osc(e)
   if math.SIN_LUT==nil then
     math.SIN_LUT={}
     for i=1,1000 do math.SIN_LUT[i]=math.sin((i-1)*math.pi*2/999) end
@@ -140,16 +141,16 @@ local function Osc(e)
   end
 end
 -- a frequency-modulation synth voice
-local function Voice(e)
+function Clodule.Voice(e)
   function cx(x)
     if type(x)=='function' then return x() else return x end
   end
   e=DC(e) or {}
-  e.env=e.env or Env()
-  e.osc=e.osc or Osc()
+  e.env=e.env or Clodule.Env()
+  e.osc=e.osc or Clodule.Osc()
   e.freq=e.freq or 440
   e.mfreq=e.mfreq or 660
-  e.mod=e.mod or Osc()
+  e.mod=e.mod or Clodule.Osc()
   e.mamp=e.mamp or 500
   e.done=false
   return function(p)
@@ -161,7 +162,7 @@ local function Voice(e)
   end
 end
 -- a simple wrapper for voices to support polyphony with automatic freeing when the voices are done playing
-local function Poly(e)
+function Clodule.Poly(e)
   e=DC(e) or {}
   e.voices={}
   return function(v)
@@ -183,7 +184,7 @@ local function Poly(e)
   end
 end
 -- a simple linear interpolating multichannel sampler
-local function Simpler(e)
+function Clodule.Simpler(e)
   local temp=e.sample;e.sample=nil;e=DC(e) or {};e.sample=temp;
   if type(e.sample)=='string' then
     e.sample=cybin.loadaudiofile(e.sample)
@@ -216,16 +217,5 @@ local function Simpler(e)
     return unpack(out)
   end
 end
-local P={}
-Clodule=P
-P.load=function() for k,v in pairs(Clodule) do _G[k]=v end end
-P.Trigger=Trigger
-P.Scheduler=Scheduler
-P.Line=Line
-P.Counter=Counter
-P.Env=Env
-P.Voice=Voice
-P.Poly=Poly
-P.Simpler=Simpler
-P.Osc=Osc
+Clodule.load=function() for k,v in pairs(Clodule) do _G[k]=v end end
 return Clodule

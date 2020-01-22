@@ -6,7 +6,7 @@ These are some helpful utilities.
 
 --]]
 -- table deep copy
-Utils={}
+local Utils={}
 function Utils.DC(t,c)
   if type(t)~='table' then return t end
   local r=c or {}
@@ -16,6 +16,7 @@ function Utils.DC(t,c)
 end
 -- table wrap
 function Utils.wrap(t,i)
+  i=math.floor(i)
   while i<1 do i=i+#t end
   while i>#t do i=i-#t end
   return t[i]
@@ -37,6 +38,45 @@ function Utils.printt(t)
     end
     io.write(']')
   end
+end
+function Utils.sort(t) t=DC(t);table.sort(t);return t;end
+function Utils.iapply(t,f)
+  t=DC(t)
+  for k,v in ipairs(t) do t[k]=f(k,v) end
+  return t
+end
+function Utils.E(n,d)
+  local function rep(x,n)
+    local ret={}; for i=1,n do ret[#ret+1]=DC(x) end; return ret
+  end
+  if n==0 then return rep(0,d) end
+  if n>=d then return rep(1,d) end
+  local function concat(a,b)
+    for i=1,#b do a[#a+1]=b[i] end
+  end
+  local function flat(t,ret)
+    ret=ret or {}
+    for _,v in ipairs(t) do
+      if type(v)=='table' then
+	flat(v,ret)
+      else
+	ret[#ret+1]=v
+      end
+    end
+    return ret
+  end
+  local ns=rep({1},n);local ds=rep({0},d-n);local nsi=nil
+  while true do
+    for i=1,#ds do
+      nsi=math.fmod(i-1,#ns)+1
+      concat(ns[nsi],ds[i])
+    end
+    if #ns-nsi<2 then break end
+    ds=ns
+    ns={}
+    while nsi>0 do ns[#ns+1]=table.remove(ds,1);nsi=nsi-1 end
+  end
+  return flat(ns)
 end
 Utils.load=function() for k,v in pairs(Utils) do _G[k]=v end end
 return Utils

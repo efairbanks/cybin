@@ -37,7 +37,7 @@ function Bleep(freq,dur,amp)
   local amp=amp or 1
   return function()
     local out=env()
-    if out==nil then return nil else return out*osc()*amp end    
+    if out==nil then return nil else return out*osc()*amp end
   end
 end
 -- "fake" generator that calls a function with the supplied name
@@ -89,7 +89,7 @@ function xpose(t,n) return apply(t,function(x) return x+n end) end
 edo=15
 transpose=math.floor(-edo*3)
 scaleCircleInterval=9
-scaleSize=6                            
+scaleSize=6
 xInterval=4
 yInterval=5
 minorThird=6/5;print(minorThird)

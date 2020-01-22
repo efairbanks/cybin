@@ -2,9 +2,10 @@
 dofile('noisy_highhats_sequence.cybin')
 --]]
 
-require('cylibs.pattern').load()
-require('cylibs.ugen')
-require('cylibs.clodule').load()
+package.path = package.path .. ";../cylibs/?.cybin"
+require('pattern').load()
+require('ugen')
+require('clodule').load()
 
 if not(cybin.offline) then
   os.execute('jack_connect cybin:audio-out_1 system:playback_1')
@@ -25,5 +26,6 @@ function __process()
   s()
   local amp=(e or function() end)()
   amp=math.pow(amp,2)
-  return math.random()*amp
+  out=math.random()*amp
+  return out,out
 end

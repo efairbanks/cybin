@@ -1,7 +1,8 @@
 math.mod=math.fmod
-dofile('cylibs/ugen.cybin')
-dofile('cylibs/clodule.cybin').load()
-dofile('cylibs/pattern.cybin').load()
+package.path = package.path .. ";../cylibs/?.cybin"
+require('ugen')
+require('clodule').load()
+require('pattern').load()
 if not cybin.offline then
   os.execute('jack_connect cybin:audio-out_1 system:playback_1')
   os.execute('jack_connect cybin:audio-out_2 system:playback_2')
@@ -12,9 +13,9 @@ s=Scheduler{}
 lcomp=Compressor{threshold=-30,ratio=2,attack=0.005,release=0.015}
 rcomp=Compressor{threshold=-30,ratio=2,attack=0.005,release=0.015}
 reverb=Reverb2{coef=0.95}
-s_gabba=cybin.loadaudiofile('./sounds/GABBA.AIF')
-s_glitch=cybin.loadaudiofile('./sounds/GLITCH.AIF')
-s_glass=cybin.loadaudiofile('./sounds/GLASS.AIF')
+s_gabba=cybin.loadaudiofile('../samples/GABBA.AIF')
+s_glitch=cybin.loadaudiofile('../samples/GLITCH.AIF')
+s_glass=cybin.loadaudiofile('../samples/GLASS.AIF')
 glitch=Simpler{sample=s_glitch}
 s{}.delta=((240/(s_glitch.frames/s_glitch.samplerate))/120)/cybin.samplerate
 
@@ -67,4 +68,3 @@ function __process()
   c=c+verb*0.2
   return lcomp(l+c,l+r+c),rcomp(r+c,l+r+c)
 end
-

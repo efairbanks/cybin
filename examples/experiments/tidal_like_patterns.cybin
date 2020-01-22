@@ -1,6 +1,7 @@
-require('cylibs.ugen')
-require('cylibs.clodule').load()
-require('cylibs.utils').load()
+package.path = package.path .. ";../cylibs/?.cybin"
+require('ugen')
+require('clodule').load()
+require('utils').load()
 os.execute('jack_lsp -c')
 os.execute('jack_connect cybin:audio-out_1 system:playback_1')
 os.execute('jack_connect cybin:audio-out_2 system:playback_2')
@@ -75,7 +76,7 @@ function Pat2Events(str,start,duration,trunc,offset)
       end
     end
     return ret
-  end  
+  end
   return ftime(p2e(pat,start or 0,duration or 1),trunc or duration,offset or 0)
 end
 
@@ -141,4 +142,3 @@ function __process()
   out=mcomp(out)*2
   return out,out
 end
-

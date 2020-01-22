@@ -1,7 +1,8 @@
 math.mod=math.fmod
-require('cylibs.ugen')
-require('cylibs.clodule').load()
-require('cylibs.utils').load()
+package.path = package.path .. ";../cylibs/?.cybin"
+require('ugen')
+require('clodule').load()
+require('utils').load()
 os.execute('jack_lsp -c')
 os.execute('jack_connect cybin:audio-out_1 system:playback_1')
 os.execute('jack_connect cybin:audio-out_2 system:playback_2')

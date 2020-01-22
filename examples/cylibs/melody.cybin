@@ -1,0 +1,53 @@
+local Melody={}
+local function DC(t,c)
+  if type(t)~='table' then return t end
+  local r=c or {}
+  for k,v in pairs(t) do r[k]=DC(v) end
+  for i,v in ipairs(t) do r[i]=DC(v) end
+  return r
+end
+local function sort(t) t=DC(t);table.sort(t);return t;end
+local function iapply(t,f)
+  t=DC(t)
+  for k,v in ipairs(t) do t[k]=f(k,v) end
+  return t
+end
+local function wrap(t,i)
+  i=math.floor(i)
+  while i<1 do i=i+#t end
+  while i>#t do i=i-#t end
+  return t[i]
+end
+------------------------
+function Melody.Pitch2Freq(p,basef,edo)
+  return math.pow(2,p/edo-edo)*basef
+end
+function Melody.Freq2Pitch(f,basef,edo)
+  return (math.log(f/basef)/math.log(2)+edo)*edo
+end
+function Melody.Index2Pitch(i,set,edo)
+  i=math.max(i,0)
+  set=iapply(set,function(k,v) return math.fmod(v,edo) end)
+  set=sort(set)
+  return set[math.fmod(i,#set)+1]+math.floor(i/#set)*edo
+end
+function Melody.Pitch2Index(p,set,edo)
+  local octw=#set
+  set=iapply(set,function(k,v) return math.fmod(v,edo) end)
+  set=sort(set)
+  table.insert(set,#set+1,set[1]+edo)
+  table.insert(set,1,set[#set]-edo)
+  local octave=0
+  local pc=p;while pc-edo>0 do pc=pc-edo;octave=octave+1 end
+  local ci=2
+  for k,v in ipairs(set) do
+    if math.abs(v-pc)<math.abs(set[ci]-pc) then ci=k end
+  end
+  ci=ci-2
+  while ci>octw do ci=ci-octw;octave=octave+1;end
+  while ci<0 do ci=ci+octw;octave=octave-1;end 
+  ci=ci+octave*octw
+  return ci
+end
+Melody.load=function() for k,v in pairs(Melody) do _G[k]=v end end
+return Melody

@@ -1,0 +1,71 @@
+package.path = package.path .. ";../cylibs/?.cybin"
+require('utils').load()
+require('melody').load()
+require('ugen')
+C=require('clodule')
+--[[
+dofile('melody_generation.cybin')
+--]]
+
+function Lag(coef)
+  local last=nil
+  return function(x)
+    last=last or x;last=x*coef+last*(1-coef);return last
+  end
+end
+function Trig(dur)
+  phase=0
+  return function(f)
+    phase=phase+1/cybin.samplerate; while phase>dur do f();phase=phase-dur end
+  end
+end
+
+sets=
+  {
+    {5,8,12},
+    {8,12,15},
+    {7,10,14,2},
+    {0,3,7}
+  }
+edo=12
+baseFreq=440/32
+lastPitch=60
+maxPitch=Freq2Pitch(710,baseFreq,edo)
+minPitch=Freq2Pitch(150,baseFreq,edo)
+tick=0
+freq=0
+f=Pitch2Freq(3,440,13)
+f=Freq2Pitch(f,440,13)
+updown=iapply(E(6,17),
+	      function(i,x) if x==0 then return -2 else return 5 end end)
+
+plag=Lag(1/450)
+osc=C.Osc({freq=440})
+env=Env()
+trig=Trig(0.12)
+r=Reverb2{}
+
+os.execute('jack_connect cybin:audio-out_1 system:playback_1')
+os.execute('jack_connect cybin:audio-out_2 system:playback_2')
+
+function __process()
+  trig(function()
+      local set=wrap(sets,tick/16)
+      local index=Pitch2Index(lastPitch,set,edo)
+      local newPitch=Index2Pitch(wrap(updown,tick)+index,set,edo)
+      lastPitch=math.min(maxPitch,math.max(minPitch,newPitch))
+      if wrap(E(7,13),tick)==1 then
+	env=C.Env{durs={0.02,0.7},vals={0,1,0}}
+	freq=Pitch2Freq(newPitch,baseFreq,edo)
+      end
+      tick=tick+1
+  end)
+  osc{freq=plag(freq)}
+  local out=math.atan(osc()*8)*math.pow(env(),15)*0.2
+  out=r(out)*2/3+out
+  return out,out
+end
+
+--[[
+dofile('mel.cybin')
+--]]
