@@ -1,5 +1,14 @@
 local Pattern={}
-Pattern.__index=Pattern
+Pattern.__index=function(self,x)
+  if type(x)=='number' then
+    x=math.floor(x)
+    while x<1 do x=x+#self end
+    while x>#self do x=x-#self end
+    return self[x]
+  else
+    return Pattern[x]
+  end
+end
 setmetatable(Pattern, {__call = function (cls, ...) return cls.new(...) end,})
 -- table deep copy
 local function DC(t,c)
@@ -45,6 +54,7 @@ function Pattern.new(t)
     return Pattern(parse(tokenize(t)))
   else
     local o=t or {}
+    o=DC(o)
     setmetatable(o,Pattern)
     for i=1,#t do
       if type(t[i])=='table' then
@@ -55,6 +65,17 @@ function Pattern.new(t)
     end
     return o
   end
+end
+function Pattern.LoadSample(t)
+  local file=cybin.loadaudiofile(t) or t
+  local ret={}
+  for i=1,file.channels do
+    ret[i]=Pattern{}
+    for j=1,file.frames do
+      ret[i][j]=file[j*file.channels+i-1]
+    end
+  end
+  return unpack(ret)
 end
 function Pattern.GenDup(n,size)
   local pat=Pattern{}

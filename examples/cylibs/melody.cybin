@@ -20,10 +20,10 @@ local function wrap(t,i)
 end
 ------------------------
 function Melody.Pitch2Freq(p,basef,edo)
-  return math.pow(2,p/edo-edo)*basef
+  return math.pow(2,p/edo)*basef
 end
 function Melody.Freq2Pitch(f,basef,edo)
-  return (math.log(f/basef)/math.log(2)+edo)*edo
+  return math.log(f/basef)/math.log(2)*edo
 end
 function Melody.Index2Pitch(i,set,edo)
   i=math.max(i,0)

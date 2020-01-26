@@ -1,0 +1,106 @@
+math.mod=math.fmod
+package.path = package.path .. ";../cylibs/?.cybin"
+require('ugen')
+C=require('clodule')
+require('pattern').load()
+require('utils').load()
+require('melody').load()
+if not cybin.offline then
+  os.execute('jack_connect cybin:audio-out_1 system:playback_1')
+  os.execute('jack_connect cybin:audio-out_2 system:playback_2')
+end
+function Lag()
+  local lastVal=nil
+  local coef=0.5
+  return function(t)
+    if type(t)=='table' then
+      coef=t.coef or 0.5
+    else
+      lastVal=t*coef+(lastVal or t)*(1-coef)
+      return lastVal
+    end
+  end
+end
+
+function SuperSaw(freq,dur)
+  local oscs={}
+  local env=function() return 0 end
+  local lp=Filter{freq=100,filterType='lowpass',reso=1}
+  local freqLag=Lag();freqLag(freq)
+  for i=-3,3,1 do
+    local f=freq*(1+(i+math.random()*0.5)/90)
+    oscs[#oscs+1]=C.Osc{freq=f,table={1,0,0,-1}}
+  end
+  return function(t)
+    if type(t)=='table' then 
+      if t.env then env=t.env end
+    else
+      local out=0
+      for _,v in ipairs(oscs) do out=out+v() end
+      local amp=math.pow(env(),2)
+      lp{freq=amp*18000+30}
+      return lp(math.atan(out*15)*0.1)*amp
+    end
+  end
+end
+
+function Samp(f)
+  local s=P.LoadSample(f)
+  local i=#s
+  return function(reset)
+    if reset then
+      i=0
+    else
+      if i<#s then i=i+1 end
+      return s[i]
+    end
+  end
+end
+function pbass(t,d,x)
+  if tonumber(x) then
+    local freq=Pitch2Freq(tonumber(x)-50,440,12)
+    ssaw=SuperSaw(freq,1)
+    local d=d
+    ssaw{env=C.Env{vals={0,1,0},durs={d,0.001}}}
+  end
+end
+
+ssaw=SuperSaw(440,1)
+s=C.Scheduler()
+s{}.delta=1.3/cybin.samplerate
+r=Reverb2{coef=0.95}
+c=Compressor()
+kick=Samp('../samples/KICK.AIF')
+snare=Samp('../samples/SNARE.AIF')
+hat=Samp('../samples/HAT.AIF')
+pkick=function(_,_,x)
+  if tonumber(x) then kick(true) end
+end
+psnare=function(_,_,x)
+  if tonumber(x) then snare(true) end
+end
+phat=function(_,_,x)
+  if tonumber(x) then hat(true) end
+end
+function play()
+  local d=0
+  return function()
+    while d>1 do
+      d=d-1
+      s(P('pbass 0 - - 36 - 3 - 72 -'):__add(11*1):Events(s{}.time,2))
+      s(P('pkick  0 - - - - 0 - -'):Events(s{}.time,2))
+      s(P('psnare - - 0 - - - 0 -'):Events(s{}.time,2))
+      s((P('phat')..P.GenDup(1,16)):Events(s{}.time,2))
+    end
+    d=d+1.3*0.5/cybin.samplerate
+  end
+end
+play=play()
+function __process()
+  play()
+  s()
+  local out=math.atan(ssaw()*10)*0.1
+  out=r(out)+out
+  out=out+kick()+snare()+(hat()+hat())*0.2
+  return out,out
+end
