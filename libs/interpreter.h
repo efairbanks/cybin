@@ -109,7 +109,6 @@ class Interpreter {
       ERROR("%s", lua_tostring(__L, -1));
       lua_pop(__L, 1);
     }
-    fprintf(stderr,"%s",CYBIN_PROMPT);
   }
   static void EventLoop(char* buff){
     int error = luaL_loadbuffer(__L, buff, strlen(buff), "line") ||
