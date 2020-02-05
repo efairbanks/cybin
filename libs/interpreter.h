@@ -102,6 +102,15 @@ class Interpreter {
     lua_settable(__L,-3);
     lua_pop(__L,2);
   }
+  static void DoString(char* string){
+    int error = luaL_loadstring(__L, string) ||
+      lua_pcall(__L,0,0,0);
+    if (error) {
+      ERROR("%s", lua_tostring(__L, -1));
+      lua_pop(__L, 1);
+    }
+    fprintf(stderr,"%s",CYBIN_PROMPT);
+  }
   static void EventLoop(char* buff){
     int error = luaL_loadbuffer(__L, buff, strlen(buff), "line") ||
       lua_pcall(__L,0,0,0);

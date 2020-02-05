@@ -149,6 +149,11 @@ int main(int argc, char** argv){
   // --- Register cybin.loadaudiofile --- //
   Interpreter::LoadFunction("loadaudiofile",cybin_loadaudiofile);
   Interpreter::LoadFunction("midiout",cybin_midiout);
+  // --- Turn off buffering --- //
+  setvbuf(stdout, NULL, _IONBF, 0);
+  setvbuf(stderr, NULL, _IONBF, 0);
+  Interpreter::DoString("io.stdout:setvbuf('no')");
+  Interpreter::DoString("io.stderr:setvbuf('no')");
   // --- Configure environment --- //
   parse_args(argc,argv);
   for(int i=0;i<Config.globals.size();i+=2) Interpreter::LoadString(Config.globals[i],Config.globals[i+1]);
