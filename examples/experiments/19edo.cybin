@@ -18,7 +18,7 @@ function lead(a,b,c)
     local index=tonumber(c)
     local pitch=Index2Pitch(index+targetIndex,chordScale,edo)
     local freq=Pitch2Freq(pitch,baseFreq,edo)
-    p(C.Voice({freq=freq,mfreq=freq*3,mamp=1600,env=C.Env{vals={0,1/2,1/4,0},durs={0.001,b/4,b}}}))
+    p(C.Voice({freq=freq,mfreq=freq*3,mamp=1600,env=C.Env{vals={0,1/2,1/4,0},durs={0.001,b/4,b*0.8}}}))
   end
 end
 
@@ -31,21 +31,17 @@ function bass(a,b,c)
     local pitch=Index2Pitch(index+targetIndex,chordScale,edo)
     local freq=Pitch2Freq(pitch,baseFreq,edo)
     local amp=math.atan(1/(freq/400))
-    p(C.Voice({freq=freq,mfreq=freq*4,mamp=200,env=C.Env{vals={0,amp,amp,0},durs={0.01,b/2,0.4}}}))
+    p(C.Voice({freq=freq,mfreq=freq*8,mamp=400,env=C.Env{vals={0,amp,amp,0},durs={0.01,b/40,0.1}}}))
   end
 end
-
-
---[[
-dofile('dnb.cybin')
---]]
 
 -- instruments, scheduler
 p=C.Poly{}
 s=C.Scheduler{}
 s{}.delta=1.4/cybin.samplerate
 trig=C.Trigger()
-r=Reverb2()
+r=Reverb2{coef=0.9,delay=1.4/64,nodes=13}
+hp=Filter{filterType='highpass',freq=10}
 
 baseFreq=55
 edo=19
@@ -60,14 +56,14 @@ function __process()
 	{13,8,P{5,6,7}:WrapAt(math.floor(s{}.time/10)),
 	 3,
 	 1})
-      p=p:Mask(P.GenBjork(P{11}:WrapAt(math.floor(s{}.time/2)),11)):Mask(P{P{0},P{1}}:WrapAt(math.floor(s{}.time/32)))
+      p=p:Mask(P.GenBjork(P{3,1,4,2}:WrapAt(math.floor(s{}.time/2)),13))
       s((P('lead')..p):Events(s{}.time,4))
       local pb=P.GenDup(1,8):Integrate():Mask(P.GenBjork(3,5)):__add(-2)
       s((P('bass')..pb):Events(s{}.time,4))
-      local pb=P.GenBjorkStructure(16,{13,10,7,5,3}):Clump(3):Shuffle(function(x) return x*math.random(3,6) end):Flatter():Mask(P.GenBjork(9,16)):__add(6):Mask(P{P{1},P{0}}:WrapAt(math.floor(s{}.time/32)))
+      local pb=P.GenBjorkStructure(16,{13,10,7,5,3}):Clump(3):Shuffle(function(x) return x*math.random(3,6) end):Flatter():Mask(P.GenBjork(9,16)):__add(6):Mask(P{P{1},P{0}}:WrapAt(math.floor(s{}.time/48)))
       s((P('bass')..pb):Events(s{}.time,4))
   end)
   local out=(p() or 0)*0.2
-  out=r(out)+out
+  out=r(out+hp(math.abs(hp(out)))*0.4)+out*0.7
   return out,out
 end
