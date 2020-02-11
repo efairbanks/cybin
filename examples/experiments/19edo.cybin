@@ -60,7 +60,7 @@ function __process()
       s((P('lead')..p):Events(s{}.time,4))
       local pb=P.GenDup(1,8):Integrate():Mask(P.GenBjork(3,5)):__add(-2)
       s((P('bass')..pb):Events(s{}.time,4))
-      local pb=P.GenBjorkStructure(16,{13,10,7,5,3}):Clump(3):Shuffle(function(x) return x*math.random(3,6) end):Flatter():Mask(P.GenBjork(9,16)):__add(6):Mask(P{P{1},P{0}}:WrapAt(math.floor(s{}.time/48)))
+      local pb=P.GenBjorkStructure(16,{13,10,7,5,3}):Clump(3):Shuffle(function(x) return x*math.random(3,6) end):Flatter():Mask(P.GenBjork(9,16)):__add(6)
       s((P('bass')..pb):Events(s{}.time,4))
   end)
   local out=(p() or 0)*0.2

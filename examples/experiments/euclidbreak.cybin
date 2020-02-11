@@ -1,0 +1,46 @@
+dofile('utils.cybin').load()
+dofile('pattern.cybin').load()
+dofile('melody.cybin')
+dofile('ugen.cybin')
+C=dofile('clodule.cybin')
+mod=math.fmod
+function Samp(s)
+  local sample=s;local index=#sample
+  return function(r)
+    if r then index=math.floor(r*#sample) end;index=index+1
+    if index<#sample then return sample[index] else return nil end
+  end
+end
+
+song=P{22,10,18,14}
+plen=song[1]
+e={s=C.Scheduler({delta=1.2/cybin.samplerate}),t=C.Trigger()}
+p={perc=P.GenBjorkStructure(plen,{15,8,4,2}):Invert()}
+breaks=Samp(P.LoadSample('../samples/BREAK.AIF'))
+kick=Samp(P.LoadSample('../samples/KICK.AIF'))
+snare=Samp(P.LoadSample('../samples/SNARE.AIF'))
+benv=C.Env{}
+beat=C.Counter()
+section=C.Counter()
+
+function __process()
+  e.s()
+  e.t(mod(e.s{}.time,1/8),function()
+    local b=beat()
+    if b>=plen then beat{phase=0};plen=song[section()] end
+    p.perc=P.GenBjorkStructure(plen,{17,8,4,2}):Invert()
+    local pi=p.perc[b]
+    benv=C.Env{durs={0.005,math.pow(p.perc:Invert():Normalize()[b],4)*2+0.05}}
+    if pi==0 then kick(p.perc:Invert():Normalize()[b]*0.01) end
+    if pi>0 and pi<4 then snare(p.perc:Apply(function(x) return math.max(x-1,0) end):Normalize()[b]*0.35) end
+    breaks(p.perc:Substitute({1,2,3,5})[b]/16)
+    oscf=P.GenBjorkStructure(plen,{10,7,5,3}):__mul(10)[b]
+  end)
+  function nilz(x) return x or 0 end
+  local out=0
+  local env=benv()
+  out=out+nilz(breaks())*math.pow(env,1.5)
+  out=out+nilz(kick())
+  out=out+nilz(snare())*math.pow(env,3)*0.7
+  return out,out
+end

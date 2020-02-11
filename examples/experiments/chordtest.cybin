@@ -1,0 +1,46 @@
+dofile('utils.cybin').load()
+dofile('pattern.cybin').load()
+dofile('melody.cybin').load()
+dofile('ugen.cybin')
+C=dofile('clodule.cybin')
+
+function Voice(t)
+  local osc=C.Osc{freq=t.freq or 440}
+  local env=C.Env{}
+  return function(t)
+    if type(t)=='table' then
+      if t.freq then osc{freq=t.freq} end
+    else
+      if env{}.done then return nil end
+      return osc()*env()
+    end
+  end
+end
+
+voices={}
+
+edo=14
+
+chord=ChordBuilder(edo):Chord(0,{'u','M3','5'},2)
+
+function getNextChord(chord)
+  return ChordBuilder(edo):Chord(chord[1],{'u','m3','5'},3)
+end
+chord=getNextChord(chord or {0,3,7})
+for i,v in ipairs(chord) do
+  voices[#voices+1]=Voice{freq=Pitch2Freq(v,440,edo)}
+end
+
+
+function __process()
+  local out=0
+  local newVoices={}
+  for i,v in ipairs(voices) do
+    local val=v()
+    out=out+(val or 0)
+    if val~=nil then newVoices[#newVoices+1]=v end
+    voices=newVoices
+  end
+  out=out/30
+  return out,out
+end

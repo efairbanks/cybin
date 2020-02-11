@@ -1,5 +1,6 @@
 local Pattern={}
 Pattern.__index=function(self,x)
+  if #self==0 then return nil end
   if type(x)=='number' then
     x=math.floor(x)
     while x<1 do x=x+#self end
@@ -8,6 +9,12 @@ Pattern.__index=function(self,x)
   else
     return Pattern[x]
   end
+end
+Pattern.__call=function(self,i)
+  if #self==0 then return nil end
+  self.phase=math.floor(i or self.phase or 0)+1
+  while self.phase>#self do self.phase=self.phase-#self end
+  return self[self.phase]
 end
 setmetatable(Pattern, {__call = function (cls, ...) return cls.new(...) end,})
 -- table deep copy
@@ -279,7 +286,7 @@ function Pattern.combine(a,b,operator)
 end
 function Pattern:Substitute(values)
   local ret=Pattern{}
-  for i=1,#self do ret[i]=Pattern.WrapAt(values,self[i]) end
+  for i=1,#self do ret[i]=Pattern.WrapAt(values,tonumber(self[i])) end
   return ret
 end
 function Pattern:SequencedSubstitute(values)
@@ -372,6 +379,10 @@ function Pattern:Normalize(func)
     ret[i]=(self[i]-min)/(max-min)
   end
   return ret
+end
+function Pattern:Invert()
+  local ret=Pattern.new(self)
+  return tonumber(ret:Max())-ret:Apply(function(x) return tonumber(x) end)
 end
 function Pattern:Degree2Pitch(scale,octaveLength)
    scale = scale or {0,2,3,5,7,8,10}

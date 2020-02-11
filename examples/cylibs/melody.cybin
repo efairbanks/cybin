@@ -45,9 +45,45 @@ function Melody.Pitch2Index(p,set,edo)
   end
   ci=ci-2
   while ci>octw do ci=ci-octw;octave=octave+1;end
-  while ci<0 do ci=ci+octw;octave=octave-1;end 
+  while ci<0 do ci=ci+octw;octave=octave-1;end
   ci=ci+octave*octw
   return ci
+end
+------------------------
+function Melody.Ratio2Pitch(r,edo)
+  local pitch=nil
+  function p2r(p) return math.pow(2,p/edo) end
+  for i=0,edo-1 do
+    if math.abs(r-p2r(pitch or 0))>math.abs(r-p2r(i)) then pitch=i end
+  end
+  return pitch
+end
+function Melody.Pitch2Class(p,edo)
+  while p<edo do p=p+edo end
+  while p>=edo do p=p-edo end
+  return p
+end
+function Melody.ChordBuilder(edo)
+  local self={}
+  local edo=edo
+  local intervalLookup={
+    ['u']=0,
+    ['5']=Melody.Ratio2Pitch(3/2,edo),
+    ['4']=Melody.Ratio2Pitch(4/3,edo),
+    ['M3']=Melody.Ratio2Pitch(5/4,edo),
+    ['m3']=Melody.Ratio2Pitch(6/5,edo),
+    ['2']=Melody.Ratio2Pitch(9/8,edo)
+  }
+  local color3rds={Melody.Ratio2Pitch(5/4,edo),Melody.Ratio2Pitch(6/5,edo)}
+  local neutral3rds={Melody.Ratio2Pitch(9/8,edo),Melody.Ratio2Pitch(4/3,edo)}
+  self.Chord = function(self,targetPitch,intervals,targetInterval)
+    local chord={}
+    for i,v in ipairs(intervals) do
+      chord[i]=Melody.Pitch2Class(intervalLookup[v]+targetPitch-intervalLookup[intervals[targetInterval]],edo)
+    end
+    return chord
+  end
+  return self
 end
 Melody.load=function() for k,v in pairs(Melody) do _G[k]=v end end
 return Melody
