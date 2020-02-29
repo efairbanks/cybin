@@ -1,0 +1,104 @@
+dofile('ugen.cybin')
+dofile('clodule.cybin').load()
+Melody=dofile('melody.cybin')
+Melody.load()
+dofile('utils.cybin').load()
+dofile('pattern.cybin').load()
+function Chord(p)
+  --local e=DC(e) or {}
+  local e={}
+  e.edo=p.edo or 12
+  e.pitch=p.pitch or 0
+  --while e.pitch<0 do e.pitch=e.pitch+edo end
+  -- false major, true ~minor
+  e.inverseThird=p.inverseThird or false
+  -- 0 tertian, 1 sustained, 2 symmetrical
+  e.quality=p.quality or 0
+  function e.GetNotes(pitch,inverse,quality,edo)
+    local pitch=pitch or e.pitch
+    local inverse=inverse or e.inverseThird
+    local quality=quality or e.quality
+    local edo=edo or e.edo or 12
+    local fifth=Melody.Ratio2Pitch(3/2,edo)
+    local third=Melody.Ratio2Pitch(wrap({5/4,4/3},quality+1),edo)
+    if inverse then
+      third=fifth-third
+      --third=Melody.Ratio2Pitch(6/5,edo)
+    end
+    if quality==2 then fifth=third*2 end
+    while pitch<0 do pitch=pitch+edo end
+    return {
+      math.fmod(pitch,edo),
+      math.fmod(third+pitch,edo),
+      math.fmod(fifth+pitch,edo)
+    }
+  end
+  function e.GetInterval(index,inverse,quality,edo) return wrap(e.GetNotes(0,inverse,quality,edo),index) end
+  function e.D()
+    return Chord({edo=e.edo,
+                  pitch=e.pitch+e.GetInterval(2,e.inverseThird),
+                  inverseThird=not(e.inverseThird),
+                  quality=e.quality})
+  end
+  function e.U()
+    --print(e.inverseThird,GetInterval(2,not(e.inverseThird)))
+    return Chord({edo=e.edo,
+                  pitch=e.pitch-e.GetInterval(2,not(e.inverseThird)),
+                  inverseThird=not(e.inverseThird),
+                  quality=e.quality})
+  end
+  function e.I()
+    return Chord({edo=e.edo,
+                  pitch=e.pitch,
+                  inverseThird=not(e.inverseThird),
+                  quality=e.quality})
+  end
+  return function(p)
+    if type(p)=='table' then return DC(p,e) end
+    if type(p)=='string' then
+      local chord=e
+      while string.len(p)>0 do
+        chord=(chord[string.sub(p,1,1)](chord)){}
+        p=string.sub(p,2,-1)
+      end
+      return Chord(chord)
+    end
+    return e.GetNotes(nil,nil,nil,p)
+  end
+end
+
+x=Chord{edo=53}
+x('DU')
+for k,v in ipairs(x()) do print(k,v) end
+
+edo=53
+baseFreq=55/2
+chord=Chord({edo=edo})
+r=Reverb2{}
+
+function __process()
+  poly=poly or Poly{};trig=trig or Trigger{};arpt=arpt or Trigger{};chordt=chordt or Trigger{}
+  trig(math.fmod(cybin.time,2),function()
+    local c=chord()
+    local xform=P('IU U D DDD')[cybin.time/2]
+    chord=chord(xform)
+  end)
+  arpt(math.fmod(cybin.time,1/8),function()
+    --print(lastPitch or Freq2Pitch(900,baseFreq,edo))
+    lastPitch=Index2Pitch(P('2 -1 -2 -2 3')[cybin.time*4]+Pitch2Index(lastPitch or Freq2Pitch(600,baseFreq,edo),chord(),edo),chord(),edo)
+    local freq=Pitch2Freq(lastPitch,baseFreq,edo)
+    --print(lastPitch)
+    poly(Voice{freq=freq,env=Env{durs={0.01,0.1}}})
+  end)
+  chordt(math.fmod(cybin.time+1,1/8),function()
+    for k,v in ipairs(chord()) do
+      local pitch=Index2Pitch(Pitch2Index(Freq2Pitch(1700,baseFreq,edo),{v},edo),{v},edo)
+      if P('1 0 0 1 0 0 1 0 0 1 0')[cybin.time*8]=='1' then
+        poly(Voice{env=Env{durs={0.01,0.2}},mamp=120,freq=math.pow(2,pitch/edo)*baseFreq/4})
+      end
+    end
+  end)
+  local out=(poly() or 0)*0.3
+  out=r(out)+out
+  return out*0.5
+end

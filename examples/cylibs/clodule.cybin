@@ -149,7 +149,7 @@ function Clodule.Voice(e)
   e.env=e.env or Clodule.Env()
   e.osc=e.osc or Clodule.Osc()
   e.freq=e.freq or 440
-  e.mfreq=e.mfreq or 660
+  e.mfreq=e.mfreq or e.freq*1 or 660
   e.mod=e.mod or Clodule.Osc()
   e.mamp=e.mamp or 500
   e.done=false

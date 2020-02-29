@@ -1,0 +1,37 @@
+require('ugen')
+C=dofile('clodule.cybin')
+require('pattern').load()
+require('utils').load()
+require('melody').load()
+os.execute('a2jmidid -e')
+os.execute('jack_connect "a2j:Midi Through [14] (capture): Midi Through Port-0" cybin:midi-in_1')
+function filter(t,f)
+  local ret={}
+  for _,v in ipairs(t) do if f(v) then ret[#ret+1]=v end end
+  return ret
+end
+p=C.Poly{}
+env=C.Env{}
+r=Reverb2{}
+cybin.midiin={}
+
+function __process(v)
+  cybin.midiin=filter(cybin.midiin, function(v)
+    if v.time<=cybin.time-0.05 then
+      if v[1]==144 and v[2]~=nil then
+        --print(cybin.time,v[1],v[2],v[3])
+        local freq=math.pow(2,v[2]/12)*444/128
+        p(C.Voice{freq=freq,mfreq=freq,env=C.Env{vals={0,v[3]/127,0},durs={0.001,0.08}}})
+        env=C.Env{durs={0.001,0.001}}
+      end
+      return false
+    else
+      return true
+    end
+  end)
+  --return math.random()*env()
+  local out=p() or 0
+  out=r(out)*0.2+out*0.2
+  out=math.atan(out*4)
+  return out,out
+end
