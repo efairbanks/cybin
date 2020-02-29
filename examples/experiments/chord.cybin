@@ -5,8 +5,7 @@ Melody.load()
 dofile('utils.cybin').load()
 dofile('pattern.cybin').load()
 function Chord(p)
-  --local e=DC(e) or {}
-  local e={}
+  local e=DC(e) or {}
   e.edo=p.edo or 12
   e.pitch=p.pitch or 0
   --while e.pitch<0 do e.pitch=e.pitch+edo end
@@ -67,28 +66,29 @@ function Chord(p)
   end
 end
 
-x=Chord{edo=53}
-x('DU')
-for k,v in ipairs(x()) do print(k,v) end
-
-edo=53
+edo=15
 baseFreq=55/2
 chord=Chord({edo=edo})
 r=Reverb2{}
+lastPitch=nil
+cindexA=nil
 
 function __process()
   poly=poly or Poly{};trig=trig or Trigger{};arpt=arpt or Trigger{};chordt=chordt or Trigger{}
-  trig(math.fmod(cybin.time,2),function()
-    local c=chord()
-    local xform=P('IU U D DDD')[cybin.time/2]
-    chord=chord(xform)
+  trig(math.fmod(cybin.time,1),function()
+    if P.GenBjork(4,10)[cybin.time]==1 then
+      cindexA=(cindexA or 0)+1
+      local c=chord()
+      local xform=P('IU U D DDD')[cindexA]
+      chord=chord(xform)
+    end
   end)
   arpt(math.fmod(cybin.time,1/8),function()
-    --print(lastPitch or Freq2Pitch(900,baseFreq,edo))
-    lastPitch=Index2Pitch(P('2 -1 -2 -2 3')[cybin.time*4]+Pitch2Index(lastPitch or Freq2Pitch(600,baseFreq,edo),chord(),edo),chord(),edo)
+    lastPitch=Index2Pitch(P('4 -2 3 -2 -3')[cybin.time*4]+Pitch2Index(lastPitch or Freq2Pitch(500,baseFreq,edo),chord(),edo),chord(),edo)
     local freq=Pitch2Freq(lastPitch,baseFreq,edo)
-    --print(lastPitch)
-    poly(Voice{freq=freq,env=Env{durs={0.01,0.1}}})
+    if P.GenBjork(10,18)[cybin.time*8]==1 then
+      poly(Voice{freq=freq,env=Env{durs={0.01,0.1}}})
+    end
   end)
   chordt(math.fmod(cybin.time+1,1/8),function()
     for k,v in ipairs(chord()) do
