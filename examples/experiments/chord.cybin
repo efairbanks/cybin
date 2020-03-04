@@ -101,7 +101,9 @@ r=Reverb2{coef=0.8,nodes=11}
 lastPitch=nil
 cindexA=nil
 
+stime=cybin.time
 function __process()
+  cybin.time=cybin.time-stime
   poly=poly or Poly{};trig=trig or Trigger{};arpt=arpt or Trigger{};chordt=chordt or Trigger{};basst=basst or Trigger{}
   trig(math.fmod(cybin.time,1),function()
     if P.GenBjork(5,10)[cybin.time]==1 then
@@ -115,7 +117,8 @@ function __process()
   arpt(math.fmod(cybin.time,1/8),function()
     if P.GenBjork(10,18)[cybin.time*8]==1 then
       local chord=chord()
-      lastPitch=Index2Pitch(P('5 -1 -2')[cybin.time*4]+Pitch2Index(math.min(lastPitch or 0,Freq2Pitch(800,baseFreq,edo)),chord,edo),chord,edo)
+      local targetPitch=Freq2Pitch(800,baseFreq,edo)
+      lastPitch=Index2Pitch(P('5 -1 -2')[cybin.time*4]+Pitch2Index(math.min(lastPitch or targetPitch,targetPitch),chord,edo),chord,edo)
       local freq=Pitch2Freq(lastPitch,baseFreq,edo)
       poly(Voice{freq=freq,env=Env{durs={0.003,0.08}}})
     end
