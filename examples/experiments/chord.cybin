@@ -8,7 +8,8 @@ function Chord(p)
   local e={}
   e.edo=p.edo or 12
   e.pitch=p.pitch or 0
-  --while e.pitch<0 do e.pitch=e.pitch+edo end
+  while e.pitch<0 do e.pitch=e.pitch+edo end
+  while e.pitch>=edo do e.pitch=e.pitch-edo end
   -- false major, true ~minor
   e.inverseThird=p.inverseThird or false
   -- 0 tertian, 1 sustained, 2 symmetrical
@@ -21,6 +22,7 @@ function Chord(p)
     local edo=edo or e.edo or 12
     local fifth=Melody.Ratio2Pitch(3/2,edo)
     local third=Melody.Ratio2Pitch(wrap({5/4,4/3},quality+1),edo)
+    while pitch<0 do pitch=pitch+edo end
     if inverse then
       third=fifth-third
       --third=Melody.Ratio2Pitch(6/5,edo)
@@ -52,6 +54,32 @@ function Chord(p)
                   inverseThird=not(e.inverseThird),
                   quality=e.quality})
   end
+  function e.S()
+    local quality=e.quality
+    if quality~=1 then quality=1 else quality=0 end
+    return Chord({edo=e.edo,
+                  pitch=e.pitch,
+                  inverseThird=not(e.inverseThird),
+                  quality=quality})
+  end
+  e['v']=function()
+    return Chord({edo=e.edo,
+                  pitch=e.pitch-1,
+                  inverseThird=e.inverseThird,
+                  quality=e.quality})
+  end
+  e['^']=function()
+    return Chord({edo=e.edo,
+                  pitch=e.pitch+1,
+                  inverseThird=e.inverseThird,
+                  quality=e.quality})
+  end
+  function e.Seventh()
+    local chord=e.GetNotes(nil,nil,nil,e.edo)
+    local fifth=Melody.Ratio2Pitch(3/2,e.edo)
+    chord[#chord+1]=math.fmod(chord[2]+fifth,e.edo)
+    return chord
+  end
   return function(p)
     if type(p)=='table' then return DC(p,e) end
     if type(p)=='string' then
@@ -74,33 +102,43 @@ lastPitch=nil
 cindexA=nil
 
 function __process()
-  poly=poly or Poly{};trig=trig or Trigger{};arpt=arpt or Trigger{};chordt=chordt or Trigger{}
+  poly=poly or Poly{};trig=trig or Trigger{};arpt=arpt or Trigger{};chordt=chordt or Trigger{};basst=basst or Trigger{}
   trig(math.fmod(cybin.time,1),function()
     if P.GenBjork(4,10)[cybin.time]==1 then
       cindexA=(cindexA or 0)+1
       local c=chord()
-      local xform=P('D ID I DIU')[cindexA]
+      local xform=P('DD S I SUU')[cindexA]
       chord=chord(xform)
+      print(chord{}.pitch,chord{}.inverseThird,chord{}.quality)
     end
   end)
   arpt(math.fmod(cybin.time,1/8),function()
     if P.GenBjork(10,18)[cybin.time*8]==1 then
-      lastPitch=Index2Pitch(P('3 -1 -1 -1 -2 1 -1')[cybin.time*4]+Pitch2Index(math.max(lastPitch or 0,Freq2Pitch(500,baseFreq,edo)),chord(),edo),chord(),edo)
+      local chord=chord{}.Seventh()
+      lastPitch=Index2Pitch(P('5 -1 -2')[cybin.time*4]+Pitch2Index(math.min(lastPitch or 0,Freq2Pitch(800,baseFreq,edo)),chord,edo),chord,edo)
       local freq=Pitch2Freq(lastPitch,baseFreq,edo)
-      poly(Voice{freq=freq,env=Env{durs={0.01,0.1}}})
+      poly(Voice{freq=freq,env=Env{durs={0.003,0.08}}})
     end
   end)
   chordt(math.fmod(cybin.time+1,1/8),function()
     for k,v in ipairs(chord()) do
-      local pitch=Index2Pitch(math.floor(math.fmod(cybin.time+1-3/8,20/8))+Pitch2Index(Freq2Pitch(1000,baseFreq,edo),{v},edo),{v},edo)
-      if P.GenBjork(8,18)[cybin.time*8]==1 then
-        poly(Voice{env=Env{durs={0.01,0.2}},mamp=120,freq=math.pow(2,pitch/edo)*baseFreq/4})
+      local pitch=Index2Pitch(math.floor(math.fmod(cybin.time+1-3/8,20/8))*0+Pitch2Index(Freq2Pitch(850,baseFreq,edo),{v},edo),{v},edo)
+      if P.GenBjork(4,18)[cybin.time*8]==1 then
+        poly(Voice{env=Env{durs={0.02,0.7},vals={0,3/5,0}},mamp=420,freq=math.pow(2,pitch/edo)*baseFreq/4})
       end
+    end
+  end)
+  basst(math.fmod(cybin.time+1,1/8),function()
+    local v=chord()[2]
+    local pitch=Index2Pitch(math.floor(math.fmod(cybin.time+1-3/8,20/8))*0+Pitch2Index(Freq2Pitch(250,baseFreq,edo),{v},edo),{v},edo)
+    if P.GenBjork(4,7)[cybin.time*8]==1 then
+      poly(Voice{env=Env{durs={0.02,0.15},vals={0,1,0}},mamp=250,freq=math.pow(2,pitch/edo)*baseFreq/4})
     end
   end)
   local out=(poly() or 0)*0.3
   out=r(out)+out
-  return out*0.5
+  out=out*0.3
+  return out,out
 end
 
 function FindTransformation(startingChord,targetNotes,transformations,maxDepth)
