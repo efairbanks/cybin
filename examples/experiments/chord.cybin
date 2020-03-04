@@ -94,27 +94,27 @@ function Chord(p)
   end
 end
 
-edo=22
+edo=53
 baseFreq=55/2
 chord=Chord({edo=edo,quality=0})
-r=Reverb2{}
+r=Reverb2{coef=0.8,nodes=11}
 lastPitch=nil
 cindexA=nil
 
 function __process()
   poly=poly or Poly{};trig=trig or Trigger{};arpt=arpt or Trigger{};chordt=chordt or Trigger{};basst=basst or Trigger{}
   trig(math.fmod(cybin.time,1),function()
-    if P.GenBjork(4,10)[cybin.time]==1 then
+    if P.GenBjork(5,10)[cybin.time]==1 then
       cindexA=(cindexA or 0)+1
       local c=chord()
-      local xform=P('DD S I SUU')[cindexA]
+      local xform=P('DD S I SUU ^')[cindexA]
       chord=chord(xform)
       print(chord{}.pitch,chord{}.inverseThird,chord{}.quality)
     end
   end)
   arpt(math.fmod(cybin.time,1/8),function()
     if P.GenBjork(10,18)[cybin.time*8]==1 then
-      local chord=chord{}.Seventh()
+      local chord=chord()
       lastPitch=Index2Pitch(P('5 -1 -2')[cybin.time*4]+Pitch2Index(math.min(lastPitch or 0,Freq2Pitch(800,baseFreq,edo)),chord,edo),chord,edo)
       local freq=Pitch2Freq(lastPitch,baseFreq,edo)
       poly(Voice{freq=freq,env=Env{durs={0.003,0.08}}})
@@ -124,7 +124,7 @@ function __process()
     for k,v in ipairs(chord()) do
       local pitch=Index2Pitch(math.floor(math.fmod(cybin.time+1-3/8,20/8))*0+Pitch2Index(Freq2Pitch(850,baseFreq,edo),{v},edo),{v},edo)
       if P.GenBjork(4,18)[cybin.time*8]==1 then
-        poly(Voice{env=Env{durs={0.02,0.7},vals={0,3/5,0}},mamp=420,freq=math.pow(2,pitch/edo)*baseFreq/4})
+        poly(Voice{env=Env{durs={0.02,0.1},vals={0,3/5,0}},mamp=420,freq=math.pow(2,pitch/edo)*baseFreq/4})
       end
     end
   end)
