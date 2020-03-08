@@ -85,5 +85,95 @@ function Melody.ChordBuilder(edo)
   end
   return self
 end
+------------------------
+function Melody.Chord(p)
+  local e=DC(p) or {}
+  e.edo=e.edo or 12
+  e.pitch=e.pitch or 0
+  while e.pitch<0 do e.pitch=e.pitch+e.edo end
+  while e.pitch>=e.edo do e.pitch=e.pitch-e.edo end
+  -- false major, true ~minor
+  e.inverseThird=e.inverseThird or false
+  -- 0 tertian, 1 sustained, 2 symmetrical
+  e.quality=e.quality or 0
+  function e.GetNotes(pitch,inverse,quality,edo)
+    local pitch=pitch or e.pitch
+    local inverse=inverse
+    if inverse==nil then inverse=e.inverseThird end
+    local quality=quality or e.quality
+    local edo=edo or e.edo or 12
+    local fifth=Melody.Ratio2Pitch(3/2,edo)
+    local third=Melody.Ratio2Pitch(wrap({5/4,4/3},quality+1),edo)
+    while pitch<0 do pitch=pitch+edo end
+    if inverse then
+      third=fifth-third
+      --third=Melody.Ratio2Pitch(6/5,edo)
+    end
+    if quality==2 then fifth=third*2 end
+    while pitch<0 do pitch=pitch+edo end
+    return {
+      math.fmod(pitch,edo),
+      math.fmod(third+pitch,edo),
+      math.fmod(fifth+pitch,edo)
+    }
+  end
+  function e.GetInterval(index,inverse,quality,edo) return wrap(e.GetNotes(0,inverse,quality,edo),index) end
+  function e.U()
+    return Chord({edo=e.edo,
+                  pitch=e.pitch+e.GetInterval(2,e.inverseThird),
+                  inverseThird=not(e.inverseThird),
+                  quality=e.quality})
+  end
+  function e.D()
+    return Chord({edo=e.edo,
+                  pitch=e.pitch-e.GetInterval(2,not(e.inverseThird)),
+                  inverseThird=not(e.inverseThird),
+                  quality=e.quality})
+  end
+  function e.I()
+    return Chord({edo=e.edo,
+                  pitch=e.pitch,
+                  inverseThird=not(e.inverseThird),
+                  quality=e.quality})
+  end
+  function e.S()
+    local quality=e.quality
+    if quality~=1 then quality=1 else quality=0 end
+    return Chord({edo=e.edo,
+                  pitch=e.pitch,
+                  inverseThird=not(e.inverseThird),
+                  quality=quality})
+  end
+  e['v']=function()
+    return Chord({edo=e.edo,
+                  pitch=e.pitch-1,
+                  inverseThird=e.inverseThird,
+                  quality=e.quality})
+  end
+  e['^']=function()
+    return Chord({edo=e.edo,
+                  pitch=e.pitch+1,
+                  inverseThird=e.inverseThird,
+                  quality=e.quality})
+  end
+  function e.Seventh()
+    local chord=e.GetNotes(nil,nil,nil,e.edo)
+    local fifth=Melody.Ratio2Pitch(3/2,e.edo)
+    chord[#chord+1]=math.fmod(chord[2]+fifth,e.edo)
+    return chord
+  end
+  return function(p)
+    if type(p)=='table' then return DC(p,e) end
+    if type(p)=='string' then
+      local chord=e
+      while string.len(p)>0 do
+        chord=(chord[string.sub(p,1,1)](chord)){}
+        p=string.sub(p,2,-1)
+      end
+      return Chord(chord)
+    end
+    return e.GetNotes(nil,nil,nil,p)
+  end
+end
 Melody.load=function() for k,v in pairs(Melody) do _G[k]=v end end
 return Melody

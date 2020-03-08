@@ -1,0 +1,82 @@
+require('ugen')
+require('clodule').load()
+require('melody').load()
+require('utils').load()
+require('pattern').load()
+midiconnected=midiconnected or os.execute('jack_connect "a2j:Midi Through [14] (capture): Midi Through Port-0" cybin:midi-in_1')
+------------------------------
+function Poly(e)
+  e=DC(e) or {}
+  e.voices={}
+  e.maxVoices=5
+  return function(v)
+    if v~=nil then
+      table.insert(e.voices,v)
+    else
+      local voices={}
+      local out=0
+      while #e.voices>e.maxVoices do table.remove(e.voices,1) end
+      for k,v in ipairs(e.voices) do
+        local vout=v()
+        if vout==nil or v{}.done or v{}.free then
+        else
+          table.insert(voices,v)
+          out=out+vout
+        end
+      end
+      e.voices=voices
+      return out/e.maxVoices
+    end
+  end
+end
+------------------------------
+function TheSystem(e)
+  e=DC(e) or {}
+  e.latency=0.2
+  e.bass=Poly()
+  e.edo=22
+  e.chord=Chord({edo=e.edo})
+  e.reverb=Reverb{nodes=11,coef=0.85}
+  function e.MIDIHandler()
+    local events=cybin.midiin;cybin.midiin={}
+    for k,v in ipairs(events) do
+      if v.time<=cybin.time-e.latency then
+        if v[1]-0x80<16 then -- noteoff
+          local channel=v[1]-0x80
+          --print('off',channel,v[2],v[3])
+          -- handle noteoff
+        elseif v[1]-0x90<16 then -- noteon
+          local channel=v[1]-0x90
+          --print('on',channel,v[2],v[3])
+          local pitch=Index2Pitch(v[2]-60,e.chord(),e.edo)
+          e.bass(Voice({
+            env=Env{durs={0.001,0.1},
+            vals={0,v[3]/127,0}},
+            freq=Pitch2Freq(pitch,55/4,e.edo)
+          }))
+          -- handle noteon
+        elseif v[1]-0xB0<16 then -- cc
+          local channel=v[1]-0xB0
+          local xformLUT=P{"U","D","I","S","^","v"}
+          e.chord=e.chord(xformLUT[v[3]+1])
+        end
+      else table.insert(cybin.midiin,v) end
+    end
+  end
+  function e.Process(p)
+    if type(p)=='table' then return DC(p,e) end
+    e.MIDIHandler()
+    local out=e.bass()
+    out=e.reverb(out)+out
+    out=math.atan(out*2)
+    return out,out
+  end
+  return e.Process
+end
+------------------------------
+sys=nil
+function __process()
+  sys=sys or TheSystem()
+  local out=sys()
+  return out,out
+end

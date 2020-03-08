@@ -1,0 +1,10 @@
+rn2ccv x=lookup x [("U",0),("D",1),("I",2),("S",3),("n",4),("v",5)]
+chordr pat=ccv $ ( fromInteger <$> fromMaybe 0 <$> rn2ccv <$> fast 1 pat)
+
+d1 $ stack [
+  slow 4 $ chordr "U [S,D,D] S [U,I]" |+ ccn "0",
+  stut' 3 (-3/16) ((+ n 2).(* gain 0.9)) $ n "{3 0 1 4 0 2 0}%8" + 12,
+  n "{0 ~ 0 0 ~ 0 ~}%8" + 6 * gain 1.1
+] |+ s "midi"
+
+:type stut'

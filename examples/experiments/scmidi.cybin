@@ -3,7 +3,6 @@ C=dofile('clodule.cybin')
 require('pattern').load()
 require('utils').load()
 require('melody').load()
-os.execute('a2jmidid -e')
 os.execute('jack_connect "a2j:Midi Through [14] (capture): Midi Through Port-0" cybin:midi-in_1')
 function filter(t,f)
   local ret={}
