@@ -3,9 +3,6 @@ require('utils').load()
 require('melody').load()
 require('ugen')
 C=require('clodule')
---[[
-dofile('melody_generation.cybin')
---]]
 
 function Lag(coef)
   local last=nil

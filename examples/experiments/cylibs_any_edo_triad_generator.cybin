@@ -4,6 +4,13 @@ dofile('melody.cybin').load()
 dofile('ugen.cybin')
 C=dofile('clodule.cybin')
 
+-- set EDO
+edo=22
+-- find an approximate minor triad in that EDO
+chord=ChordBuilder(edo):Chord(0,{'u','m3','5'},1)
+
+-- a place for synth voices
+voices={}
 function Voice(t)
   local osc=C.Osc{freq=t.freq or 440}
   local env=C.Env{}
@@ -17,21 +24,12 @@ function Voice(t)
   end
 end
 
-voices={}
-
-edo=14
-
-chord=ChordBuilder(edo):Chord(0,{'u','M3','5'},2)
-
-function getNextChord(chord)
-  return ChordBuilder(edo):Chord(chord[1],{'u','m3','5'},3)
-end
-chord=getNextChord(chord or {0,3,7})
+-- create synth voices for chord notes
 for i,v in ipairs(chord) do
   voices[#voices+1]=Voice{freq=Pitch2Freq(v,440,edo)}
 end
 
-
+-- generate audio
 function __process()
   local out=0
   local newVoices={}
@@ -41,6 +39,6 @@ function __process()
     if val~=nil then newVoices[#newVoices+1]=v end
     voices=newVoices
   end
-  out=out/30
+  out=out*0.1
   return out,out
 end

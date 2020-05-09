@@ -77,6 +77,7 @@ function Melody.ChordBuilder(edo)
   local color3rds={Melody.Ratio2Pitch(5/4,edo),Melody.Ratio2Pitch(6/5,edo)}
   local neutral3rds={Melody.Ratio2Pitch(9/8,edo),Melody.Ratio2Pitch(4/3,edo)}
   self.Chord = function(self,targetPitch,intervals,targetInterval)
+    targetInterval=targetInterval or 1
     local chord={}
     for i,v in ipairs(intervals) do
       chord[i]=Melody.Pitch2Class(intervalLookup[v]+targetPitch-intervalLookup[intervals[targetInterval]],edo)
