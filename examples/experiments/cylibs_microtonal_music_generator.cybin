@@ -17,7 +17,7 @@ r=Reverb2{coef=0.8,nodes=11}
 lastPitch=nil
 cindexA=nil
 
-stime=cybin.time
+stime=(cybin.time or 0)
 function __process()
   cybin.time=cybin.time-stime
   poly=poly or Poly{};trig=trig or Trigger{};arpt=arpt or Trigger{};chordt=chordt or Trigger{};basst=basst or Trigger{}
