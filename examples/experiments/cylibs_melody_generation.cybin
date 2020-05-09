@@ -1,4 +1,8 @@
+-- in some versions of lua mod is fmod
+math.mod=math.fmod
+-- add cylibs path to Lua search path if it's not there already
 package.path = package.path .. ";../cylibs/?.cybin"
+-- include cylibs
 require('utils').load()
 require('melody').load()
 require('ugen')
@@ -42,9 +46,6 @@ env=Env()
 trig=Trig(0.12)
 r=Reverb2{}
 
-os.execute('jack_connect cybin:audio-out_1 system:playback_1')
-os.execute('jack_connect cybin:audio-out_2 system:playback_2')
-
 function __process()
   trig(function()
       local set=wrap(sets,tick/16)
@@ -62,7 +63,3 @@ function __process()
   out=r(out)*2/3+out
   return out,out
 end
-
---[[
-dofile('mel.cybin')
---]]

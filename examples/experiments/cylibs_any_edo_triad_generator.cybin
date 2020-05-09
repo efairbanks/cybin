@@ -1,8 +1,13 @@
-dofile('utils.cybin').load()
-dofile('pattern.cybin').load()
-dofile('melody.cybin').load()
-dofile('ugen.cybin')
-C=dofile('clodule.cybin')
+-- in some versions of lua mod is fmod
+math.mod=math.fmod
+-- add cylibs path to Lua search path if it's not there already
+package.path = package.path .. ";../cylibs/?.cybin"
+-- include cylibs
+require('utils').load()
+require('pattern').load()
+require('melody').load()
+require('ugen')
+C=require('clodule')
 
 -- set EDO
 edo=22

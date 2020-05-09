@@ -1,9 +1,14 @@
-dofile('ugen.cybin')
-dofile('clodule.cybin').load()
-Melody=dofile('melody.cybin')
+-- in some versions of lua mod is fmod
+math.mod=math.fmod
+-- add cylibs path to Lua search path if it's not there already
+package.path = package.path .. ";../cylibs/?.cybin"
+-- include cylibs
+require('ugen')
+require('clodule').load()
+Melody=require('melody')
 Melody.load()
-dofile('utils.cybin').load()
-dofile('pattern.cybin').load()
+require('utils').load()
+require('pattern').load()
 
 edo=53
 baseFreq=55/2

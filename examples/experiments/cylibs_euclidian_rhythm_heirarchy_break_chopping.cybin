@@ -1,9 +1,14 @@
-dofile('utils.cybin').load()
-dofile('pattern.cybin').load()
-dofile('melody.cybin')
-dofile('ugen.cybin')
-C=dofile('clodule.cybin')
-mod=math.fmod
+-- in some versions of lua mod is fmod
+math.mod=math.fmod
+-- add cylibs path to Lua search path if it's not there already
+package.path = package.path .. ";../cylibs/?.cybin"
+-- include cylibs
+require('utils').load()
+require('pattern').load()
+require('melody')
+require('ugen')
+C=require('clodule')
+
 function Samp(s)
   local sample=s;local index=#sample
   return function(r)
@@ -25,7 +30,7 @@ section=C.Counter()
 
 function __process()
   e.s()
-  e.t(mod(e.s{}.time,1/8),function()
+  e.t(math.mod(e.s{}.time,1/8),function()
     local b=beat()
     if b>=plen then beat{phase=0};plen=song[section()] end
     p.perc=P.GenBjorkStructure(plen,{17,8,4,2}):Invert()

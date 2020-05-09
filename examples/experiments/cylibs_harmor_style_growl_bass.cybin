@@ -1,11 +1,10 @@
+-- in some versions of lua mod is fmod
 math.mod=math.fmod
+-- add cylibs path to Lua search path if it's not there already
 package.path = package.path .. ";../cylibs/?.cybin"
+-- include cylibs
 require('clodule').load()
 require('utils').load()
-if not cybin.offline then
-  os.execute('jack_connect cybin:audio-out_1 system:playback_1')
-  os.execute('jack_connect cybin:audio-out_2 system:playback_2')
-end
 
 -- additive synth
 function Adsynth(e)

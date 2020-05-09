@@ -1,15 +1,11 @@
+-- in some versions of lua mod is fmod
 math.mod=math.fmod
+-- add cylibs path to Lua search path if it's not there already
 package.path = package.path .. ";../cylibs/?.cybin"
+-- include cylibs
 require('ugen')
 require('clodule').load()
 require('utils').load()
-os.execute('jack_lsp -c')
-os.execute('jack_connect cybin:audio-out_1 system:playback_1')
-os.execute('jack_connect cybin:audio-out_2 system:playback_2')
-
---[[ you can execute the following line /w Ctrl-C => Ctrl-C to execute the whole file
-dofile('state_machine_sequencer.cybin')
---]]
 
 --------------------------------------------------------------
 -------------- Helpful classes / functions -------------------
