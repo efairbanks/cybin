@@ -1,7 +1,3 @@
--- in some versions of lua mod is fmod
-math.mod=math.fmod
--- add cylibs path to Lua search path if it's not there already
-package.path = package.path .. ";../cylibs/?.cybin"
 -- include cylibs
 require('ugen')
 C=require('clodule')

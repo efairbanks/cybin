@@ -92,6 +92,7 @@
 ;; - Cmd `cybin-show-process-buffer': switch to REPL buffer
 ;; - Cmd `cybin-hide-process-buffer': hide window showing REPL buffer
 ;; - Var `cybin-always-show': show REPL buffer after sending something
+;; - Cmd `cybin-send-file' : send the whole file
 ;; - Cmd `cybin-send-buffer': send whole buffer
 ;; - Cmd `cybin-send-current-line': send current line
 ;; - Cmd `cybin-send-defun': send current top-level function
@@ -224,6 +225,16 @@ element is itself expanded with `cybin-rx-to-string'. "
                  (cons string integer))
   :group 'cybin)
 
+(defcustom cybin-jack-autoconnect t
+  "If true, will automatically connect Cybin to JACK."
+  :type 'boolean
+  :group 'cybin)
+
+(defcustom cybin-default-boot-file ""
+  "Specify default Cybin boot file."
+  :type 'string
+  :group 'cybin)
+
 (defcustom cybin-default-command-switches (list)
   "Command switches for `cybin-default-application'.
 Should be a list of strings."
@@ -285,6 +296,7 @@ Should be a list of strings."
       (mapc (lambda (key_defn)
               (define-key result-map (read-kbd-macro (car key_defn)) (cdr key_defn)))
             '(("C-b" . cybin-send-buffer)
+              ("C-d" . cybin-send-file)
               ("C-e" . cybin-send-paragraph)
               ("C-c" . cybin-send-current-line)
               ("C-f" . cybin-search-documentation)))
@@ -1694,6 +1706,10 @@ When called interactively, switch to the process buffer."
     ;  (goto-char (point-max)))
     ;; send initialization code
     (cybin-send-string cybin-process-init-code)
+    (when cybin-jack-autoconnect
+      (cybin-send-string "os.execute('jack_connect cybin:audio-out_1 system:playback_1')")
+      (cybin-send-string "os.execute('jack_connect cybin:audio-out_2 system:playback_2')"))
+    (cybin-boot-file)
 
     ;; enable error highlighting in stack traces
     (require 'compile)
@@ -1828,6 +1844,36 @@ Otherwise, return START."
   (interactive)
   (cybin-send-region (point-min) (point-max)))
 
+(defun cybin-boot-file ()
+  "Execute Cybin boot file (boot.cybin) if it exists."
+  (if (file-exists-p "boot.cybin")
+    (cybin-send-string "dofile('boot.cybin');\n")
+    (when (file-exists-p cybin-default-boot-file) (cybin-send-string (format "dofile('%s');\n" cybin-default-boot-file)))))
+
+(defun cybin-send-file ()
+  "Send entire file to Cybin process."
+  (interactive)
+  (let* ((cybin-file (or (buffer-file-name) (buffer-name)))
+         (command
+          ;; Print empty line before executing the code so that the first line
+          ;; of output doesn't end up on the same line as current prompt.
+          (format "print(''); dofile(%s);\n"
+                  (cybin-make-cybin-string cybin-file))))
+    (cybin-send-string "command")
+    (when cybin-always-show (cybin-show-process-buffer))))
+
+(defun cybin-send-file ()
+  "Send entire file to Cybin process."
+  (interactive)
+  (let* ((cybin-file (or (buffer-file-name) (buffer-name)))
+         (command
+          ;; Print empty line before executing the code so that the first line
+          ;; of output doesn't end up on the same line as current prompt.
+          (format "print(''); dofile(%s);\n"
+                  (cybin-make-cybin-string cybin-file))))
+    (cybin-send-string command)
+    (when cybin-always-show (cybin-show-process-buffer))))
+
 (defun cybin-restart-with-whole-file ()
   "Restart Cybin process and send whole file as input."
   (interactive)
@@ -1839,7 +1885,6 @@ Otherwise, return START."
 Create a Cybin process if one doesn't already exist."
   (interactive)
   (display-buffer (process-buffer (cybin-get-create-process))))
-
 
 (defun cybin-hide-process-buffer ()
   "Delete all windows that display `cybin-process-buffer'."
