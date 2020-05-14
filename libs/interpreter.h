@@ -6,7 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <lua.hpp>
-#include <unistd.h>
+#ifdef _WIN32
+//#include <unistd.h>
+#else
+#include <Windows.h>
+#endif
 #include "util.h"
 
 #define CYBIN_PROMPT "cybin> "

@@ -1,8 +1,14 @@
+#define NOJACK
 #include <lua.hpp>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
+#ifdef _WIN32
+#define HAVE_STRUCT_TIMESPEC
+//#include <unistd.h>
+#else
+#include <Windows.h>
+#endif
 #include <pthread.h>
 #include <math.h>
 #include <vector>

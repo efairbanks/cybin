@@ -1,0 +1,10 @@
+﻿  main.cpp
+C:\Users\eric\source\repos\cybin\libs\audiofile.h(44,11): warning C4477: 'fprintf' : format string '%8x' requires an argument of type 'unsigned int', but variadic argument 2 has type 'size_t'
+C:\Users\eric\source\repos\cybin\libs\audiofile.h(44,11): message : consider using '%zx' in the format string
+C:\Users\eric\source\repos\cybin\libs\audiofile.h(44,11): warning C4477: 'fprintf' : format string '%8x' requires an argument of type 'unsigned int', but variadic argument 3 has type 'size_t'
+C:\Users\eric\source\repos\cybin\libs\audiofile.h(44,11): message : consider using '%zx' in the format string
+C:\Users\eric\source\repos\cybin\libs\audiofile.h(47,11): warning C4477: 'fprintf' : format string '%8x' requires an argument of type 'unsigned int', but variadic argument 2 has type 'size_t'
+C:\Users\eric\source\repos\cybin\libs\audiofile.h(47,11): message : consider using '%zx' in the format string
+C:\Users\eric\source\repos\cybin\libs\audiofile.h(47,11): warning C4477: 'fprintf' : format string '%8x' requires an argument of type 'unsigned int', but variadic argument 3 has type 'size_t'
+C:\Users\eric\source\repos\cybin\libs\audiofile.h(47,11): message : consider using '%zx' in the format string
+  cybin.vcxproj -> C:\Users\eric\source\repos\cybin\x64\Debug\cybin.exe

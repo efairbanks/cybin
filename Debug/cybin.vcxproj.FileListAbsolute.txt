@@ -1,0 +1,4 @@
+C:\Users\eric\source\repos\cybin\Debug\cybin.vcxproj.CopyComplete
+C:\Users\eric\source\repos\cybin\Debug\cybin.exe
+C:\Users\eric\source\repos\cybin\Debug\cybin.pdb
+C:\Users\eric\source\repos\cybin\Debug\lua51.dll
