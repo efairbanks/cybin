@@ -23,7 +23,7 @@ struct{
   int samplerate;
   int channels;
   char* outfile;
-  char* loadfile;
+  std::vector<char*> loadfiles;
   int fps;
   int render_width;
   int render_height;
@@ -34,18 +34,13 @@ typedef struct{
   char dirty=0;
 } SharedInput;
 void parse_args(int argc, char** argv){
-#ifndef NOJACK
-  Config.offline=false;
-#else
   Config.offline=true;
-#endif
   Config.list_devices=false;
   Config.set_device=-1;
   Config.duration=10;
   Config.samplerate=48000;
   Config.channels=2;
   Config.outfile="cybin.wav";
-  Config.loadfile=NULL;
   Config.fps=25;
   Config.render_width=400;
   Config.render_height=300;
@@ -89,7 +84,7 @@ void parse_args(int argc, char** argv){
       i++;currentArg=argv[i];
       Config.globals.push_back(currentArg);
     } else {
-      Config.loadfile=currentArg;
+      Config.loadfiles.push_back(currentArg);
     }
   }
 }
@@ -161,7 +156,7 @@ int main(int argc, char** argv){
     Interpreter::LoadNumber("samplerate",Config.samplerate);
     Interpreter::LoadNumber("channels",Config.channels);
     Interpreter::LoadBool("offline",Config.offline);
-    if(Config.loadfile!=NULL) Interpreter::LoadFile(Config.loadfile);
+    for(int i=0;i<Config.loadfiles.size();i++) Interpreter::LoadFile(Config.loadfiles[i]);
     printf("Rendering %f seconds of %d-channel audio to %s at %dHz",Config.duration,Config.channels,Config.outfile,Config.samplerate);
     int frames=int(Config.duration*Config.samplerate);
     float* buffer = (float*)malloc(frames*Config.channels*sizeof(float));
@@ -188,7 +183,7 @@ int main(int argc, char** argv){
     JackAudio::getInstance()->SetCallback(__process);
     Interpreter::LoadNumber("samplerate",JackAudio::getInstance()->GetSampleRate());
     Interpreter::LoadNumber("channels", Config.channels);
-    if(Config.loadfile!=NULL) Interpreter::LoadFile(Config.loadfile);
+    for(int i=0;i<Config.loadfiles.size();i++) Interpreter::LoadFile(Config.loadfiles[i]);
     // --- Handle REPL event loop --- //
     SharedInput Input;
     pthread_t input_handler_thread;

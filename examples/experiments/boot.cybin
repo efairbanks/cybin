@@ -2,3 +2,4 @@
 math.mod=math.fmod
 -- add cylibs path to Lua search path if it's not there already
 package.path = package.path .. ";../cylibs/?.cybin"
+package.path = package.path .. ";./examples/cylibs/?.cybin"
