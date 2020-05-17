@@ -1,9 +1,10 @@
 ﻿  main.cpp
 C:\Users\eric\source\repos\cybin\libs\audiofile.h(40,39): warning C4244: '=': conversion from 'sf_count_t' to 'int', possible loss of data
-C:\Users\eric\source\repos\cybin\libs\interpreter.h(100,18): warning C4018: '<': signed/unsigned mismatch
-C:\Users\eric\source\repos\cybin\libs\interpreter.h(127,18): warning C4018: '<': signed/unsigned mismatch
-C:\Users\eric\source\repos\cybin\libs\interpreter.h(154,69): warning C4244: '=': conversion from 'lua_Number' to 'float', possible loss of data
-C:\Users\eric\source\repos\cybin\main.cpp(70,27): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\eric\source\repos\cybin\libs\interpreter.h(102,18): warning C4018: '<': signed/unsigned mismatch
+C:\Users\eric\source\repos\cybin\libs\interpreter.h(131,18): warning C4018: '<': signed/unsigned mismatch
+C:\Users\eric\source\repos\cybin\libs\interpreter.h(159,69): warning C4244: '=': conversion from 'lua_Number' to 'float', possible loss of data
+C:\Users\eric\source\repos\cybin\main.cpp(67,27): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
 C:\Users\eric\source\repos\cybin\main.cpp(165,16): warning C4018: '<': signed/unsigned mismatch
+C:\Users\eric\source\repos\cybin\main.cpp(170,18): warning C4018: '<': signed/unsigned mismatch
   LINK : C:\Users\eric\source\repos\cybin\Debug\cybin.exe not found or not built by the last incremental link; performing full link
   cybin.vcxproj -> C:\Users\eric\source\repos\cybin\Debug\cybin.exe
