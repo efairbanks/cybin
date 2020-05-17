@@ -28,13 +28,14 @@ struct{
   int render_width;
   int render_height;
   std::vector<char*> globals;
+  bool no_logo;
 } Config;
 typedef struct{
   char COMMAND_BUFFER[1048576];
   char dirty=0;
 } SharedInput;
 void parse_args(int argc, char** argv){
-  Config.offline=true;
+  Config.offline=false;
   Config.list_devices=false;
   Config.set_device=-1;
   Config.duration=10;
@@ -44,6 +45,7 @@ void parse_args(int argc, char** argv){
   Config.fps=25;
   Config.render_width=400;
   Config.render_height=300;
+  Config.no_logo=false;
   for(int i=1;i<argc;i++){
     char* currentArg=argv[i];
     if(strcmp("--offline",currentArg)==0){
@@ -77,6 +79,8 @@ void parse_args(int argc, char** argv){
     } else if(strcmp("--fps",currentArg)==0){
       i++;currentArg=argv[i];
       Config.fps=atoi(currentArg);
+    } else if(strcmp("--no-logo",currentArg)==0) {
+      Config.no_logo=true;
     } else if(currentArg[0]=='-') {
       int j=0;
       while(currentArg[j]=='-'&&currentArg[j]!='\0') j++;
@@ -140,7 +144,7 @@ void* input_handler(void* data){
 }
 int main(int argc, char** argv){
   // --- Start Lua --- //
-  Interpreter::Init();
+  Interpreter::Init(Config.no_logo);
   // --- Register cybin.loadaudiofile --- //
   Interpreter::LoadFunction("loadaudiofile",cybin_loadaudiofile);
   Interpreter::LoadFunction("midiout",cybin_midiout);
@@ -162,12 +166,14 @@ int main(int argc, char** argv){
     float* buffer = (float*)malloc(frames*Config.channels*sizeof(float));
     int progress=-1;
     int glFrameCounter=0;
-    for(int i=0;i<frames;i++) {
+    int i;
+    for(i=0;i<frames;i++) {
       progress=print_progress(i,frames,20,progress);
       float* samples=Interpreter::Process(((double)i)/((double)Config.samplerate),Config.channels,Config.channels);
+      if(Interpreter::PROCESS_ERROR_FLAG) break;
       for(int j=0;j<Config.channels;j++) buffer[i*Config.channels+j]=samples[j];
     }
-    AudioFile file(buffer,int(Config.duration*Config.samplerate),Config.channels,Config.samplerate);
+    AudioFile file(buffer,i,Config.channels,Config.samplerate);
     file.Write(Config.outfile);
     printf("\n%s Wrote audio to %s\n",CYBIN_PROMPT,Config.outfile);
   } else {
