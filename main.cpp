@@ -143,6 +143,8 @@ void* input_handler(void* data){
   }
 }
 int main(int argc, char** argv){
+  // --- Parse arguments --- //
+  parse_args(argc,argv);
   // --- Start Lua --- //
   Interpreter::Init(Config.no_logo);
   // --- Register cybin.loadaudiofile --- //
@@ -154,7 +156,6 @@ int main(int argc, char** argv){
   Interpreter::DoString("io.stdout:setvbuf('no')");
   Interpreter::DoString("io.stderr:setvbuf('no')");
   // --- Configure environment --- //
-  parse_args(argc,argv);
   for(int i=0;i<Config.globals.size();i+=2) Interpreter::LoadString(Config.globals[i],Config.globals[i+1]);
   if(Config.offline) {   // --- OFFLINE RENDERING ---- //
     Interpreter::LoadNumber("samplerate",Config.samplerate);
@@ -168,14 +169,17 @@ int main(int argc, char** argv){
     int glFrameCounter=0;
     int i;
     for(i=0;i<frames;i++) {
-      progress=print_progress(i,frames,20,progress);
       float* samples=Interpreter::Process(((double)i)/((double)Config.samplerate),Config.channels,Config.channels);
-      if(Interpreter::PROCESS_ERROR_FLAG) break;
+      if(Interpreter::ERROR_FLAG) {
+        printf("\n%sExiting render loop because Cybin encountered an error\n",CYBIN_PROMPT);
+        break;
+      }
+      progress=print_progress(i,frames,20,progress);
       for(int j=0;j<Config.channels;j++) buffer[i*Config.channels+j]=samples[j];
     }
     AudioFile file(buffer,i,Config.channels,Config.samplerate);
     file.Write(Config.outfile);
-    printf("\n%s Wrote audio to %s\n",CYBIN_PROMPT,Config.outfile);
+    printf("\n%sWrote audio to %s\n",CYBIN_PROMPT,Config.outfile);
   } else {
 #ifndef NOJACK
     JackAudio::getInstance()->Initialize(

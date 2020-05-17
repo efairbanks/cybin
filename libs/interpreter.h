@@ -20,7 +20,7 @@ class Interpreter {
   static float AUDIO_OUT_CHANNEL_DATA[256];
   static std::vector<MidiEvent*> MIDI_IN_DATA;
   static std::vector<MidiEvent*> MIDI_OUT_DATA;
-  static bool PROCESS_ERROR_FLAG;
+  static bool ERROR_FLAG;
   static void Init(bool no_logo){
     if(!__L){
       __L=luaL_newstate();
@@ -36,6 +36,7 @@ class Interpreter {
   static void LoadFile(char* filename){
     if(__L) {
       if(luaL_loadfile(__L,filename)){
+        ERROR_FLAG=true;
         ERROR("%s", lua_tostring(__L,-1));
         lua_pop(__L,1);
         fprintf(stderr,"%s",CYBIN_PROMPT);
@@ -107,6 +108,7 @@ class Interpreter {
     int error = luaL_loadstring(__L, string) ||
       lua_pcall(__L,0,0,0);
     if (error) {
+      ERROR_FLAG=true;
       ERROR("%s", lua_tostring(__L, -1));
       lua_pop(__L, 1);
     }
@@ -115,6 +117,7 @@ class Interpreter {
     int error = luaL_loadbuffer(__L, buff, strlen(buff), "line") ||
       lua_pcall(__L,0,0,0);
     if (error) {
+      ERROR_FLAG=true;
       ERROR("%s", lua_tostring(__L, -1));
       lua_pop(__L, 1);
     }
@@ -137,13 +140,13 @@ class Interpreter {
       for(int i=0;i<numInChannels;i++) lua_pushnumber(__L,AUDIO_IN_CHANNEL_DATA[i]);
       switch(lua_pcall(__L,numInChannels,LUA_MULTRET,0)){
         case LUA_ERRRUN:
-          PROCESS_ERROR_FLAG=true;
+          ERROR_FLAG=true;
           fprintf(stderr,"%s\nError: __process threw an unrecoverable error and has been reset.\n", lua_tostring(__L, -1));
           lua_pop(__L, 1);
           luaL_dostring(__L,"__process=nil");
           return AUDIO_OUT_CHANNEL_DATA;
-        case LUA_ERRMEM:fprintf(stderr,"MEMORY ALLOCATION ERROR\n");return 0;
-        case LUA_ERRERR:fprintf(stderr,"ERROR HANDLING ERROR\n");return 0;
+        case LUA_ERRMEM:ERROR_FLAG=true;fprintf(stderr,"MEMORY ALLOCATION ERROR\n");return 0;
+        case LUA_ERRERR:ERROR_FLAG=true;fprintf(stderr,"ERROR HANDLING ERROR\n");return 0;
         default:break;
       }
       numLuaChannels=lua_gettop(__L)-top;
@@ -165,6 +168,6 @@ float Interpreter::AUDIO_OUT_CHANNEL_DATA[256];
 float Interpreter::AUDIO_IN_CHANNEL_DATA[256];
 std::vector<MidiEvent*> Interpreter::MIDI_IN_DATA;
 std::vector<MidiEvent*> Interpreter::MIDI_OUT_DATA;
-bool Interpreter::PROCESS_ERROR_FLAG;
+bool Interpreter::ERROR_FLAG;
 
 #endif
