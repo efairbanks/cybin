@@ -1,0 +1,70 @@
+dofile('pattern.cybin').load()
+dofile('ugen.cybin')
+
+brk=P.LoadSample('../samples/BREAK.AIF')
+kick=P.LoadSample('../samples/KICK.AIF')
+snare=P.LoadSample('../samples/SNARE.AIF')
+glass=P.LoadSample('../samples/GLASS.AIF')
+kick.loop=false
+snare.loop=false
+glass.loop=false
+
+function bpm2s(bpm,beats) return 60/(bpm*beats) end
+function s2bpm(s) return 120/s end
+function Metro(bpm,beats)
+  local beat=0
+  local phase=0
+  local dur=bpm2s(bpm,beats)
+  return function(f)
+    phase=phase+1/cybin.samplerate
+    if phase>dur then f(beat); beat=beat+1; phase=phase-dur end
+  end
+end
+
+bpm=s2bpm(#brk/cybin.samplerate)
+m=Metro(bpm,4)
+seq=P.GenBjorkStructure(28,{24,16,12,10,8,6,4,2}):Invert()
+ss=P{3,1,5,2,4}
+rvb=Reverb2{nodes=17}
+comp=Compressor{threshold=-15,ratio=4,attack=0.001,release=0.07,makeup=0}
+gcomp=Compressor{threshold=-25,ratio=10}
+glsn=P{4,6,5,4,3,4,5,6,5}
+glsd=P{4,3,2,1,2,3,2}
+bnoiseamp=0
+bnoisehpf=Filter{filterType='highpass',freq=9000,reso=2}
+hpf=Filter{filterType='highpass',freq=30}
+brkamp=1
+gspeed=0.3
+glsamp=0
+
+print(bpm2s(bpm,4)*26*16)
+
+function __process()
+    m(function(beat)
+      if math.fmod(beat,26)==0 then
+        seq=P.GenBjorkStructure(2*13,{24,15+ss(),14,10,8,6,4,2}):Invert()
+      end
+      if math.fmod(math.floor((beat+3)/26),8) < 4 then brkamp=0 else brkamp=1 end
+      if math.fmod(math.floor((beat)/26),16) < 8 then glsamp=0 else glsamp=1 end
+      if math.fmod(beat,26*4)>= 26*4*7/8 then hpf{freq=5000} else hpf{freq=30+(1-brkamp)*250} end
+      if math.fmod(beat,13)>=10 then
+        bnoisehpf{freq=math.random(7000,9000)}
+        bnoiseamp = 1
+      else bnoiseamp = 0 end
+      local sel=seq()
+      brk(sel/8)
+      if sel==0 then
+        gspeed=glsn()/(glsd()*32)
+      end
+      if sel==0 or sel==3 or sel==5 then kick(0);glass(0) end
+      if sel==2 or sel==4 then snare(0) end
+    end)
+    local kick=kick()
+    local bnoise=bnoisehpf(math.random()*math.sin(cybin.time*100)*bnoiseamp)*0.1
+    local gls=gcomp(glass()+bnoise,kick)
+    glass.speed=gspeed+gls*glsamp*0.8
+    local out=hpf(brk()*brkamp+kick*0.45+gls)+snare()*0.9+gls
+    local verb=rvb(out)
+    out=math.atan(comp((out+verb/12)*1.2)*6)/2
+    return out,out
+end

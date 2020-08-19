@@ -10,11 +10,25 @@ Pattern.__index=function(self,x)
     return Pattern[x]
   end
 end
-Pattern.__call=function(self,i)
+Pattern.__call=function(self,i,loop)
   if #self==0 then return nil end
-  self.phase=math.floor(i or self.phase or 0)+1
-  while self.phase>#self do self.phase=self.phase-#self end
-  return self[self.phase]
+  if type(i)=='number' then
+    local w,f=math.modf(i)
+    if f==0 then
+      self.phase=w
+    else
+      self.phase=f*(#self-1)
+    end
+  end
+  self.phase=(self.phase or 0)+(self.speed or 1)
+  if self.loop then
+    while self.phase>#self do self.phase=self.phase-#self end
+    while self.phase<1 do self.phase=self.phase+#self end
+  else
+    if self.phase>#self then self.phase=#self end
+    if self.phase<1 then self.phase=1 end
+  end
+  return self[math.floor(self.phase)]
 end
 setmetatable(Pattern, {__call = function (cls, ...) return cls.new(...) end,})
 -- table deep copy
@@ -65,11 +79,12 @@ function Pattern.new(t)
     setmetatable(o,Pattern)
     for i=1,#t do
       if type(t[i])=='table' then
-	o[i]=Pattern(t[i])
+      	o[i]=Pattern(t[i])
       else
-	o[i]=t[i]
+      	o[i]=t[i]
       end
     end
+    o.loop=true
     return o
   end
 end
@@ -78,6 +93,7 @@ function Pattern.LoadSample(t)
   local ret={}
   for i=1,file.channels do
     ret[i]=Pattern{}
+    ret.samplerate=file.samplerate
     for j=1,file.frames do
       ret[i][j]=file[j*file.channels+i-1]
     end
